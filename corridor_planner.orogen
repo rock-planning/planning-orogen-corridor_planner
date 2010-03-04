@@ -1,0 +1,23 @@
+name 'corridor_planner'
+
+using_library 'nav'
+import_types_from "base"
+import_types_from "corridorWrappers.hpp"
+
+task_context 'Task' do
+    needs_configuration
+    property 'terrain_classes', 'string'
+    property 'map', 'string'
+    property 'start_point',  'wrappers/Vector3'
+    property 'target_point', 'wrappers/Vector3'
+    property 'margin', 'double'
+
+    runtime_states :dstar, :skeleton, :plan, :plan_simplification
+
+    output_port 'plan', 'corridor_planner/Plan'
+end
+
+deployment 'test_corridor_planner' do
+    task('planner', 'Task')
+end
+

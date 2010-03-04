@@ -1,0 +1,66 @@
+#! /usr/bin/env ruby
+
+require 'orocos'
+include Orocos
+
+if ARGV.size != 7
+    STDERR.puts "scripts/run terrain_classes_file map_file goalX goalY startX startY expand_factor"
+    exit 1
+end
+
+BASE_DIR = File.expand_path('..', File.dirname(__FILE__))
+ENV['PKG_CONFIG_PATH'] = "#{File.join(BASE_DIR, 'build')}:#{ENV['PKG_CONFIG_PATH']}"
+Orocos.initialize
+
+terrain_classes_file = File.expand_path(ARGV.shift)
+map_file             = File.expand_path(ARGV.shift)
+if !File.exists?(terrain_classes_file)
+    STDERR.puts "#{terrain_classes_file} does not exist"
+end
+if !File.exists?(map_file)
+    STDERR.puts "#{map_file} does not exist"
+end
+
+goalX                = Float(ARGV.shift)
+goalY                = Float(ARGV.shift)
+startX               = Float(ARGV.shift)
+startY               = Float(ARGV.shift)
+expand_factor        = Float(ARGV.shift)
+
+Orocos::Process.spawn 'test_corridor_planner', :output => 'cplanner-log.txt' do |p|
+    task = p.task('planner')
+
+    task.terrain_classes = terrain_classes_file
+    task.map = map_file
+
+    start = task.start_point
+    start.data[0] = startX
+    start.data[1] = startY
+    start.data[2] = 0
+    task.start_point = start
+
+    goal = task.target_point
+    goal.data[0] = goalX
+    goal.data[1] = goalY
+    goal.data[2] = 0
+    task.target_point = goal
+
+    task.margin = expand_factor || 1.1
+
+    task.configure
+    task.start
+
+    last_state = nil
+    while true
+        if last_state != task.state
+            STDERR.puts task.state
+            last_state = task.state
+        end
+
+        if !task.running?
+            break
+        end
+        sleep 0.1
+    end
+end
+
