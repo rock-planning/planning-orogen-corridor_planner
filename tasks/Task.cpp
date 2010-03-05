@@ -3,6 +3,8 @@
 
 #include <boost/lexical_cast.hpp>
 
+#include <Eigen/LU>
+
 using namespace corridor_planner;
 
 Task::Task(std::string const& name)
@@ -31,23 +33,23 @@ bool Task::configureHook()
 // }
 
 template<typename SrcContainer, typename DstContainer>
-static void wrapContainer(DstContainer& dest, SrcContainer const& src,
-        double scale, Eigen::Transform3d const& world_to_local)
+static void wrapContainer(DstContainer& dest, SrcContainer& src,
+        double scale, Eigen::Transform3d const& raster_to_world)
 {
     dest.resize(src.size());
 
     size_t point_idx;
-    typename SrcContainer::const_iterator src_it = src.begin();
-    typename SrcContainer::const_iterator const src_end = src.end();
+    typename SrcContainer::iterator src_it = src.begin();
+    typename SrcContainer::iterator const src_end = src.end();
     for (point_idx = 0, src_it = src.begin(); src_it != src.end(); ++point_idx, ++src_it)
     {
-        toWrapper(dest[point_idx], *src_it, scale, world_to_local);
+        toWrapper(dest[point_idx], *src_it, scale, raster_to_world);
     }
 }
 
 template<typename SrcContainer>
 static void wrapContainer(std::vector< wrappers::Vector3 >& dest, SrcContainer const& src,
-        double scale, Eigen::Transform3d const& world_to_local)
+        double scale, Eigen::Transform3d const& raster_to_world)
 {
     dest.reserve(src.size());
 
@@ -56,61 +58,56 @@ static void wrapContainer(std::vector< wrappers::Vector3 >& dest, SrcContainer c
     typename SrcContainer::const_iterator const src_end = src.end();
     for (point_idx = 0, src_it = src.begin(); src_it != src.end(); ++point_idx, ++src_it)
     {
-        Eigen::Vector3d p(world_to_local * src_it->toEigen());
+        Eigen::Vector3d p(raster_to_world * src_it->toEigen());
         dest.push_back(p);
     }
 }
 
 
-static void toWrapper(Curve& dest, base::geometry::NURBSCurve3D const& src,
-        double scale, Eigen::Transform3d const& world_to_local)
+static void toWrapper(Curve& dest, base::geometry::Spline<3> const& src,
+        double scale, Eigen::Transform3d const& raster_to_world)
 {
-    dest.geometric_resolution = src.getGeometricResolution();
-    dest.curve_order = src.getCurveOrder();
-    std::vector<Eigen::Vector3d> const& points = src.getPoints();
-    for (int i = 0; i < points.size(); ++i)
+    base::geometry::Spline<3> world_curve(src);
+    world_curve.transform(raster_to_world);
+    dest = world_curve;
+}
+
+static void toWrapper(Corridor& dest, nav::Corridor& src,
+        double scale, Eigen::Transform3d const& raster_to_world)
+{
+    src.updateCurves();
+    toWrapper(dest.median_curve, src.median_curve, scale, raster_to_world);
+    toWrapper(dest.boundary_curves[0], src.boundary_curves[0], scale, raster_to_world);
+    toWrapper(dest.boundary_curves[1], src.boundary_curves[1], scale, raster_to_world);
+
+    // Now compute an estimate of the "width curve"
+    base::geometry::Spline<1> width;
+    typedef base::geometry::Spline<1>::vector_t point_t;
+    std::vector<point_t> points;
+    std::vector<double> parameters;
+    float delta = (src.median_curve.getEndParam() - src.median_curve.getStartParam()) / src.voronoi.size();
+    for (float t = src.median_curve.getStartParam();
+            t < src.median_curve.getEndParam(); t += delta)
     {
-        Eigen::Vector3d p = world_to_local * points[i];
-        dest.points.push_back(p);
+        Eigen::Vector3d p = src.median_curve.getPoint(t);
+        nav::Corridor::voronoi_const_iterator median_it = src.findNearestMedian(nav::PointID(p.x(), p.y()));
+        {
+            point_t p;
+            p(0, 0) = median_it->width;
+            points.push_back(p);
+        }
+        parameters.push_back(t);
     }
+
+    width.interpolate(points, parameters);
+    width.simplify(1);
+    dest.width = width;
 }
 
-static void toWrapper(VoronoiPoint& dest, nav::VoronoiPoint const& src, 
-        double scale, Eigen::Transform3d const& world_to_local)
+static void toWrapper(Plan& dest, nav::Plan& src,
+        double scale, Eigen::Transform3d const& raster_to_world)
 {
-    dest.center = world_to_local * src.center.toEigen();
-    dest.width  = scale * src.width;
-
-    if (src.borders.size() != 2)
-        throw std::logic_error("got point with " + boost::lexical_cast<std::string>(src.borders.size()) + " borders");
-
-    wrapContainer(dest.borders[0], src.borders.front(), scale, world_to_local);
-    wrapContainer(dest.borders[1], src.borders.back(), scale, world_to_local);
-}
-
-static void toWrapper(Corridor& dest, nav::Corridor const& src,
-        double scale, Eigen::Transform3d const& world_to_local)
-{
-    wrapContainer(dest.voronoi, src.voronoi, scale, world_to_local);
-
-    dest.voronoi.resize(src.voronoi.size());
-    int i;
-    std::list< nav::VoronoiPoint>::const_iterator voronoi_it;
-    for (i = 0, voronoi_it = src.voronoi.begin(); voronoi_it != src.voronoi.end(); ++i, ++voronoi_it)
-        toWrapper(dest.voronoi[i], *voronoi_it, scale, world_to_local);
-
-    wrapContainer(dest.boundaries[0], src.boundaries[0], scale, world_to_local);
-    wrapContainer(dest.boundaries[1], src.boundaries[1], scale, world_to_local);
-
-    toWrapper(dest.median_curve, src.median_curve, scale, world_to_local);
-    toWrapper(dest.boundary_curves[0], src.boundary_curves[0], scale, world_to_local);
-    toWrapper(dest.boundary_curves[1], src.boundary_curves[1], scale, world_to_local);
-}
-
-static void toWrapper(Plan& dest, nav::Plan const& src,
-        double scale, Eigen::Transform3d const& world_to_local)
-{
-    wrapContainer(dest.corridors, src.corridors, scale, world_to_local);
+    wrapContainer(dest.corridors, src.corridors, scale, raster_to_world);
 
     for (int corridor_idx = 0; corridor_idx < src.corridors.size(); ++corridor_idx)
     {
@@ -156,8 +153,8 @@ void Task::updateHook()
 
         // Finished, send to the output ports and stop the task
         Plan result;
-        toWrapper(result, planner->plan, planner->map->getScale(),
-                planner->map->getLocalToWorld());
+        Eigen::Transform3d raster_to_world(planner->map->getLocalToWorld().inverse());
+        toWrapper(result, planner->plan, planner->map->getScale(), raster_to_world);
         _plan.write(result);
         stop();
         return;

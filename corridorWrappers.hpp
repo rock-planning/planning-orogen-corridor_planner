@@ -2,7 +2,7 @@
 #define NAV_TYPES_H
 
 #include <base/wrappers/eigen.h>
-#include <base/wrappers/geometry/NURBSCurve3D.h>
+#include <base/wrappers/geometry/spline.h>
 
 namespace nav
 {
@@ -13,21 +13,11 @@ namespace nav
 
 namespace corridor_planner
 {
-    typedef wrappers::geometry::NURBSCurve3D Curve;
-    typedef std::vector<wrappers::Vector3> PointVector;
-
-    struct VoronoiPoint
-    {
-        double            width;
-        wrappers::Vector3 center;
-        PointVector       borders[2];
-    };
+    typedef wrappers::geometry::Spline Curve;
 
     struct Corridor
     {
-        std::vector<VoronoiPoint> voronoi;
-        PointVector boundaries[2];
-
+        Curve width;
         Curve median_curve;
         Curve boundary_curves[2];
     };
