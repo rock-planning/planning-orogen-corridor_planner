@@ -3,14 +3,18 @@
 require 'orocos'
 include Orocos
 
-if ARGV.size != 7
-    STDERR.puts "scripts/run terrain_classes_file map_file goalX goalY startX startY expand_factor"
+if ARGV.size != 7 && ARGV.size != 8
+    STDERR.puts "scripts/run [task_name] terrain_classes_file map_file goalX goalY startX startY expand_factor"
     exit 1
 end
 
 BASE_DIR = File.expand_path('..', File.dirname(__FILE__))
 ENV['PKG_CONFIG_PATH'] = "#{File.join(BASE_DIR, 'build')}:#{ENV['PKG_CONFIG_PATH']}"
 Orocos.initialize
+
+if ARGV.size == 8
+    task_name = ARGV.shift
+end
 
 terrain_classes_file = File.expand_path(ARGV.shift)
 map_file             = File.expand_path(ARGV.shift)
@@ -27,9 +31,7 @@ startX               = Float(ARGV.shift)
 startY               = Float(ARGV.shift)
 expand_factor        = Float(ARGV.shift)
 
-Orocos::Process.spawn 'test_corridor_planner', :output => 'cplanner-log.txt' do |p|
-    task = p.task('planner')
-
+do_compute = lambda do |task|
     task.terrain_classes = terrain_classes_file
     task.map = map_file
 
@@ -61,6 +63,16 @@ Orocos::Process.spawn 'test_corridor_planner', :output => 'cplanner-log.txt' do 
             break
         end
         sleep 0.1
+    end
+end
+
+if task_name
+    task = TaskContext.get(task_name)
+    do_compute[task]
+else
+    Orocos::Process.spawn 'test_corridor_planner', :output => 'cplanner-log.txt' do |p|
+        task = p.task('planner')
+        do_compute[task]
     end
 end
 
