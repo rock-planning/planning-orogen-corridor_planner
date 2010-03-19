@@ -20,7 +20,7 @@ bool Task::configureHook()
     Eigen::Vector3d p0 = _start_point.get();
     Eigen::Vector3d p1 = _target_point.get();
     planner->setMarginFactor(_margin.get());
-    planner->setPositions(
+    planner->setWorldPositions(
             Eigen::Vector2d(p0.x(), p0.y()), 
             Eigen::Vector2d(p1.x(), p1.y()));
 
