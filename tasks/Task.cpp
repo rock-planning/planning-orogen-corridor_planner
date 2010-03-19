@@ -169,7 +169,7 @@ void Task::updateHook()
 
         // Finished, send to the output ports and stop the task
         Plan result;
-        Eigen::Transform3d raster_to_world(planner->map->getLocalToWorld().inverse());
+        Eigen::Transform3d raster_to_world(planner->map->getLocalToWorld());
         toWrapper(result, planner->plan, planner->map->getScale(), raster_to_world);
         _plan.write(result);
         stop();
