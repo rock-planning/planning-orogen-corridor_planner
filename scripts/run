@@ -1,6 +1,7 @@
 #! /usr/bin/env ruby
 
 require 'orocos'
+require 'tools'
 include Orocos
 
 if ARGV.size != 7 && ARGV.size != 8
@@ -20,9 +21,11 @@ terrain_classes_file = File.expand_path(ARGV.shift)
 map_file             = File.expand_path(ARGV.shift)
 if !File.exists?(terrain_classes_file)
     STDERR.puts "#{terrain_classes_file} does not exist"
+    exit 1
 end
 if !File.exists?(map_file)
     STDERR.puts "#{map_file} does not exist"
+    exit 1
 end
 
 goalX                = Float(ARGV.shift)
@@ -52,6 +55,9 @@ do_compute = lambda do |task|
     task.configure
     task.start
 
+    # To get the result when the task finished
+    result_reader = task.plan.reader
+
     last_state = nil
     while true
         if last_state != task.state
@@ -59,7 +65,13 @@ do_compute = lambda do |task|
             last_state = task.state
         end
 
-        if !task.running?
+        if task.error?
+            STDERR.puts "Failed ..."
+            break
+        elsif !task.running?
+            plan = result_reader.read
+            STDERR.puts "found #{plan.corridors.size} corridors"
+            result_reader.read.to_dot('result.dot')
             break
         end
         sleep 0.1
@@ -72,6 +84,8 @@ if task_name
 else
     Orocos::Process.spawn 'test_corridor_planner', :output => 'cplanner-log.txt' do |p|
         task = p.task('planner')
+
+        Orocos.log_all_ports
         do_compute[task]
     end
 end
