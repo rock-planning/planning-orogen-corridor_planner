@@ -19,5 +19,6 @@ end
 
 deployment 'test_corridor_planner' do
     task('planner', 'Task')
+    add_default_logger
 end
 
