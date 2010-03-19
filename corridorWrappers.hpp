@@ -17,6 +17,7 @@ namespace corridor_planner
 
     struct Corridor
     {
+        double min_width, max_width;
         Curve width;
         Curve median_curve;
         Curve boundary_curves[2];
@@ -35,6 +36,7 @@ namespace corridor_planner
 
     struct Plan
     {
+        int start_corridor, end_corridor;
         std::vector<Corridor> corridors;
         std::vector<CorridorConnection> connections;
     };

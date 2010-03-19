@@ -99,6 +99,19 @@ static void toWrapper(Corridor& dest, nav::Corridor& src,
         parameters.push_back(t);
     }
 
+    std::list<nav::VoronoiPoint>::const_iterator voronoi_it;
+    float max_width = src.voronoi.front().width, min_width = max_width;
+    for (voronoi_it = src.voronoi.begin(); voronoi_it != src.voronoi.end(); ++voronoi_it)
+    {
+        float this_width = voronoi_it->width;
+        if (min_width > this_width)
+            min_width = this_width;
+        if (max_width < this_width)
+            max_width = this_width;
+    }
+    dest.min_width = min_width;
+    dest.max_width = max_width;
+
     width.interpolate(points, parameters);
     width.simplify(1);
     dest.width = width;
@@ -125,6 +138,9 @@ static void toWrapper(Plan& dest, nav::Plan& src,
             dest.connections.push_back(conn);
         }
     }
+
+    dest.start_corridor = src.findStartCorridor();
+    dest.end_corridor   = src.findEndCorridor();
 }
 
 void Task::updateHook()
