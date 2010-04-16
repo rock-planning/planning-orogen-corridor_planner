@@ -64,10 +64,11 @@ static void wrapContainer(std::vector< wrappers::Vector3 >& dest, SrcContainer c
 }
 
 
-static void toWrapper(Curve& dest, base::geometry::Spline<3> const& src,
-        double scale, Eigen::Transform3d const& raster_to_world)
+template<int DIM, typename Transform>
+static void toWrapper(Curve& dest, base::geometry::Spline<DIM> const& src,
+        Transform const& raster_to_world)
 {
-    base::geometry::Spline<3> world_curve(src);
+    base::geometry::Spline<DIM> world_curve(src);
     world_curve.transform(raster_to_world);
     dest = world_curve;
 }
@@ -76,45 +77,13 @@ static void toWrapper(Corridor& dest, nav::Corridor& src,
         double scale, Eigen::Transform3d const& raster_to_world)
 {
     src.updateCurves();
-    toWrapper(dest.median_curve, src.median_curve, scale, raster_to_world);
-    toWrapper(dest.boundary_curves[0], src.boundary_curves[0], scale, raster_to_world);
-    toWrapper(dest.boundary_curves[1], src.boundary_curves[1], scale, raster_to_world);
+    toWrapper(dest.median_curve, src.median_curve, raster_to_world);
+    toWrapper(dest.boundary_curves[0], src.boundary_curves[0], raster_to_world);
+    toWrapper(dest.boundary_curves[1], src.boundary_curves[1], raster_to_world);
 
-    // Now compute an estimate of the "width curve"
-    base::geometry::Spline<1> width;
-    typedef base::geometry::Spline<1>::vector_t point_t;
-    std::vector<point_t> points;
-    std::vector<double> parameters;
-    float delta = (src.median_curve.getEndParam() - src.median_curve.getStartParam()) / src.voronoi.size();
-    for (float t = src.median_curve.getStartParam();
-            t < src.median_curve.getEndParam(); t += delta)
-    {
-        Eigen::Vector3d p = src.median_curve.getPoint(t);
-        nav::Corridor::voronoi_const_iterator median_it = src.findNearestMedian(nav::PointID(p.x(), p.y()));
-        {
-            point_t p;
-            p(0, 0) = median_it->width;
-            points.push_back(p);
-        }
-        parameters.push_back(t);
-    }
-
-    std::list<nav::VoronoiPoint>::const_iterator voronoi_it;
-    float max_width = src.voronoi.front().width, min_width = max_width;
-    for (voronoi_it = src.voronoi.begin(); voronoi_it != src.voronoi.end(); ++voronoi_it)
-    {
-        float this_width = voronoi_it->width;
-        if (min_width > this_width)
-            min_width = this_width;
-        if (max_width < this_width)
-            max_width = this_width;
-    }
-    dest.min_width = min_width;
-    dest.max_width = max_width;
-
-    width.interpolate(points, parameters);
-    width.simplify(1);
-    dest.width = width;
+    dest.min_width = src.min_width;
+    dest.max_width = src.max_width;
+    toWrapper(dest.width_curve, src.width_curve, scale);
 }
 
 static void toWrapper(Plan& dest, nav::Plan& src,

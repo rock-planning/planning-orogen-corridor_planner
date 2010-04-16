@@ -6,13 +6,22 @@ import_types_from "corridorWrappers.hpp"
 
 task_context 'Task' do
     needs_configuration
-    property 'terrain_classes', 'string'
-    property 'map', 'string'
-    property 'start_point',  'wrappers/Vector3'
-    property 'target_point', 'wrappers/Vector3'
-    property 'margin', 'double'
 
-    runtime_states :dstar, :skeleton, :plan, :plan_simplification
+    property('terrain_classes', 'string').
+        doc "path to the terrain class definition file"
+    property('map', 'string').
+        doc "path to the traversability map"
+    property('start_point',  'wrappers/Vector3').
+        doc "starting point in world coordinates"
+    property('target_point', 'wrappers/Vector3').
+        doc "target point in world coordinates"
+    property('margin', 'double', 1.1).
+        doc "allowed cost margin, as a rate w.r.t. the optimal cost (i.e. 1.1 means 10% above optimal)"
+
+    runtime_states :dstar, # the task is running the D* pass
+        :skeleton, # the task is running the skeleton extraction pass
+        :plan, # the task is running the plan generation pass
+        :plan_simplification # the task is running the plan simplification pass
 
     output_port 'plan', 'corridor_planner/Plan'
 end

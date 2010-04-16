@@ -18,7 +18,7 @@ namespace corridor_planner
     struct Corridor
     {
         double min_width, max_width;
-        Curve width;
+        Curve width_curve;
         Curve median_curve;
         Curve boundary_curves[2];
     };
