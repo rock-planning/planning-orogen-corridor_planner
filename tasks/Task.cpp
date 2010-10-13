@@ -91,7 +91,7 @@ static void toWrapper(Plan& dest, nav::Plan& src,
 {
     wrapContainer(dest.corridors, src.corridors, scale, raster_to_world);
 
-    for (int corridor_idx = 0; corridor_idx < src.corridors.size(); ++corridor_idx)
+    for (unsigned int corridor_idx = 0; corridor_idx < src.corridors.size(); ++corridor_idx)
     {
         nav::Corridor const& corridor = src.corridors[corridor_idx];
         nav::Corridor::const_connection_iterator
