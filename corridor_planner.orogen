@@ -17,6 +17,8 @@ task_context 'Task' do
         doc "target point in world coordinates"
     property('margin', 'double', 1.1).
         doc "allowed cost margin, as a rate w.r.t. the optimal cost (i.e. 1.1 means 10% above optimal)"
+    property('min_width', 'double', 0).
+        doc "minimum width at which a corridor can be traversed, in meters"
 
     runtime_states :dstar, # the task is running the D* pass
         :skeleton, # the task is running the skeleton extraction pass

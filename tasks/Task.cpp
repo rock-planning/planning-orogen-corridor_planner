@@ -15,7 +15,7 @@ bool Task::configureHook()
 {
     delete planner;
     planner  = new nav::CorridorPlanner();
-    planner->init(_terrain_classes.get(), _map.get());
+    planner->init(_terrain_classes.get(), _map.get(), _min_width.get());
 
     Eigen::Vector3d p0 = _start_point.get();
     Eigen::Vector3d p1 = _target_point.get();
