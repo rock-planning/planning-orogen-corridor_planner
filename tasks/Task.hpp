@@ -3,17 +3,15 @@
 
 #include "corridor_planner/TaskBase.hpp"
 
-namespace nav {
-    class CorridorPlanner;
-}
-
 namespace corridor_planner {
+    class CorridorPlanner;
+
     class Task : public TaskBase
     {
 	friend class TaskBase;
 
     protected:
-        nav::CorridorPlanner* planner;
+        corridor_planner::CorridorPlanner* planner;
         void exportResults();
 
     public:

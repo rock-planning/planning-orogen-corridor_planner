@@ -25,7 +25,7 @@ task_context 'Task' do
         :plan, # the task is running the plan generation pass
         :plan_simplification # the task is running the plan simplification pass
 
-    output_port 'plan', 'corridor_planner/Plan'
+    output_port 'plan', 'corridors/Plan'
 end
 
 deployment 'test_corridor_planner' do

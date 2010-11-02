@@ -1,5 +1,5 @@
 #include "Task.hpp"
-#include <nav/corridor_planner.hh>
+#include <corridor_planner/corridor_planner.hh>
 
 #include <boost/lexical_cast.hpp>
 
@@ -14,7 +14,7 @@ Task::Task(std::string const& name)
 bool Task::configureHook()
 {
     delete planner;
-    planner  = new nav::CorridorPlanner();
+    planner  = new corridor_planner::CorridorPlanner();
     planner->init(_terrain_classes.get(), _map.get(), _min_width.get());
     return true;
 }
@@ -64,7 +64,7 @@ static void wrapContainer(std::vector< wrappers::Vector3 >& dest, SrcContainer c
 
 
 template<int DIM, typename Transform>
-static void toWrapper(Curve& dest, base::geometry::Spline<DIM> const& src,
+static void toWrapper(corridors::Curve& dest, base::geometry::Spline<DIM> const& src,
         Transform const& raster_to_world)
 {
     base::geometry::Spline<DIM> world_curve(src);
@@ -72,7 +72,7 @@ static void toWrapper(Curve& dest, base::geometry::Spline<DIM> const& src,
     dest = world_curve;
 }
 
-static void toWrapper(Corridor& dest, nav::Corridor& src,
+static void toWrapper(corridors::Corridor& dest, corridor_planner::Corridor& src,
         double scale, Eigen::Transform3d const& raster_to_world)
 {
     src.updateCurves();
@@ -85,28 +85,29 @@ static void toWrapper(Corridor& dest, nav::Corridor& src,
     toWrapper(dest.width_curve, src.width_curve, scale);
 }
 
-static void toWrapper(Plan& dest, nav::Plan& src,
+static void toWrapper(corridors::Plan& dest, corridor_planner::Plan& src,
         double scale, Eigen::Transform3d const& raster_to_world)
 {
     wrapContainer(dest.corridors, src.corridors, scale, raster_to_world);
 
     for (unsigned int corridor_idx = 0; corridor_idx < src.corridors.size(); ++corridor_idx)
     {
-        nav::Corridor const& corridor = src.corridors[corridor_idx];
-        nav::Corridor::const_connection_iterator
+        corridor_planner::Corridor const& corridor = src.corridors[corridor_idx];
+        corridor_planner::Corridor::const_connection_iterator
             conn_it = corridor.connections.begin(),
             conn_end = corridor.connections.end();
 
         for (; conn_it != conn_end; ++conn_it)
         {
-            CorridorConnection conn = 
-                { corridor_idx, conn_it->this_side ? BACK_SIDE : FRONT_SIDE,
-                  conn_it->target_idx, conn_it->target_side ? BACK_SIDE : FRONT_SIDE };
+            corridors::CorridorConnection conn = 
+                { corridor_idx, conn_it->this_side ? corridors::BACK_SIDE : corridors::FRONT_SIDE,
+                  conn_it->target_idx, conn_it->target_side ? corridors::BACK_SIDE : corridors::FRONT_SIDE };
 
             dest.connections.push_back(conn);
         }
     }
 
+    dest.cell_size      = scale;
     dest.start_corridor = src.findStartCorridor();
     dest.end_corridor   = src.findEndCorridor();
 }
@@ -136,7 +137,7 @@ void Task::updateHook()
         planner->simplifyPlan();
 
         // Finished, send to the output ports and stop the task
-        Plan result;
+        corridors::Plan result;
         Eigen::Transform3d raster_to_world(planner->map->getLocalToWorld());
         toWrapper(result, planner->plan, planner->map->getScale(), raster_to_world);
         _plan.write(result);
