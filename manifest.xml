@@ -12,5 +12,5 @@
   <depend package="orocos/logger"/>
   <depend package="orocos/orogen"/>
   <depend package="orocos/rtt"/>
-  <depend package="planning/nav"/>
+  <depend package="planning/corridor_planner"/>
 </package>
