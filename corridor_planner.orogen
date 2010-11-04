@@ -2,7 +2,7 @@ name 'corridor_planner'
 
 using_library 'corridor_planner'
 import_types_from "base"
-import_types_from "corridorWrappers.hpp"
+import_types_from "corridors.hh"
 
 task_context 'Task' do
     needs_configuration
