@@ -1,0 +1,24 @@
+#! /usr/bin/env ruby
+
+
+require 'orocos/log'
+require 'widget_grid'
+
+
+logs = Orocos::Log::Replay.open ARGV.shift
+port = logs.find_port('/corridors/Plan_m', ARGV.shift)
+
+_, _, sample = port.stream.first
+puts "sample has #{sample.corridors.length} corridors"
+port.stream.rewind
+
+if !port
+    raise "no log stream of type /corridors/Plan_m found"
+end
+puts port.class
+
+widget_grid = WidgetGrid.new
+base_dir = File.expand_path(File.dirname(__FILE__))
+widget_grid.display(port, :env => File.join(base_dir, 'track-simple'), :pointcloud => [1, 100, 100, 0.25, 0.25])
+widget_grid.control(logs)
+widget_grid.run
