@@ -50,7 +50,8 @@ do_compute = lambda do |task|
     goal.data[2] = 0
     task.target_point = goal
 
-    task.margin = expand_factor || 1.1
+    task.margin    = expand_factor || 1.1
+    task.min_width = 0.75
 
     task.configure
     task.start
