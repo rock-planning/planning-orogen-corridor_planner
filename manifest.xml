@@ -8,9 +8,9 @@
         Sylvain Joyeux/sylvain.joyeux@m4x.org
     </copyright>
   <license>GPL v2 or later</license>
-  <depend package="orocos/base"/>
-  <depend package="orocos/logger"/>
-  <depend package="orocos/orogen"/>
-  <depend package="orocos/rtt"/>
+
+  <depend package="base/orogen/types"/>
+  <depend package="tools/logger"/>
+  <depend package="orogen"/>
   <depend package="planning/corridor_planner"/>
 </package>

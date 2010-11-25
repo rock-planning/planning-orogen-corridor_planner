@@ -11,9 +11,9 @@ task_context 'Task' do
         doc "path to the terrain class definition file"
     property('map', 'string').
         doc "path to the traversability map"
-    property('start_point',  'wrappers/Vector3').
+    property('start_point',  'base/Vector3d').
         doc "starting point in world coordinates"
-    property('target_point', 'wrappers/Vector3').
+    property('target_point', 'base/Vector3d').
         doc "target point in world coordinates"
     property('margin', 'double', 1.1).
         doc "allowed cost margin, as a rate w.r.t. the optimal cost (i.e. 1.1 means 10% above optimal)"
