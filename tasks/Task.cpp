@@ -1,5 +1,5 @@
 #include "Task.hpp"
-#include <corridor_planner/corridor_planner.hh>
+#include <corridor_planner.hh>
 
 #include <boost/lexical_cast.hpp>
 
