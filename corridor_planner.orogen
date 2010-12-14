@@ -1,7 +1,9 @@
 name 'corridor_planner'
 
-using_library 'corridor_planner'
 import_types_from "base"
+
+using_library 'corridor_planner'
+# corridors.hh is installed by the corridor_planner library
 import_types_from "corridors.hh"
 
 task_context 'Task' do
