@@ -1,10 +1,9 @@
 #! /usr/bin/env ruby
 
-require 'simlog'
-require 'tools'
+require 'pocolog'
+require 'corridor_plan'
 
-include Pocosim
-
+include Pocolog
 io = Logfiles.open(ARGV.shift)
 stream = io.stream(ARGV.shift)
 
@@ -13,15 +12,11 @@ data = stream.samples.map do |_, _, data|
 end
 
 if data
+    pp data.connections
     STDERR.puts "has #{data.corridors.size} corridors"
-    data.to_dot('plan.dot')
-
-    STDERR.puts "starting at c#{data.start_corridor}, end at c#{data.end_corridor}"
-
-
-    path = [[data.start_corridor, :FRONT_SIDE]]
-    traverse(data, path)
-    output_path(File.open('plan.csv', 'w'), data, path)
+    File.open('plan.dot', 'w') do |io|
+        io.write data.to_dot
+    end
 
     data
 end

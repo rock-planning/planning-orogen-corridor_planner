@@ -1,9 +1,14 @@
 #! /usr/bin/env ruby
 
-
 require 'orocos/log'
 require 'widget_grid'
+require 'corridor_plan'
+require 'base/typelib_plugin'
 
+if ARGV.size < 1 || ARGV.size > 2
+    STDERR.puts "display_log logfile [stream_name]"
+    exit 1
+end
 
 logs = Orocos::Log::Replay.open ARGV.shift
 port = logs.find_port('/corridors/Plan_m', ARGV.shift)
@@ -15,10 +20,23 @@ port.stream.rewind
 if !port
     raise "no log stream of type /corridors/Plan_m found"
 end
-puts port.class
 
 widget_grid = WidgetGrid.new
 base_dir = File.expand_path(File.dirname(__FILE__))
-widget_grid.display(port, :env => File.join(base_dir, 'track-simple'), :pointcloud => [1, 100, 100, 0.25, 0.25])
+widget = widget_grid.display(port, :env => File.join(base_dir, 'track-simple'), :pointcloud => [1, 100, 100, 0.25, 0.25], :position => :center)
 widget_grid.control(logs)
-widget_grid.run
+
+paths = sample.all_paths
+
+tic = Time.now
+widget_grid.run do
+    if (Time.now - tic) > 2
+        p = rand(paths.size)
+        selected = paths[p]
+        puts "selected path #{selected.inspect}"
+        corridor = sample.path_to_corridor(selected)
+        widget.updateSelectedCorridor(corridor)
+        tic = Time.now
+    end
+end
+
