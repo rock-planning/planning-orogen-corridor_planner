@@ -1,0 +1,7 @@
+*.*.log
+*.*.idx
+*.dot
+*.svg
+*.ior
+*-log.txt
+orocos.log
