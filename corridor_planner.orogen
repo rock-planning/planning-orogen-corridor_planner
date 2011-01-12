@@ -6,6 +6,8 @@ using_library 'corridor_planner'
 # corridors.hh is installed by the corridor_planner library
 import_types_from "corridor_planner/corridors.hh"
 
+typekit.export_types '/corridors/Corridor'
+
 task_context 'Task' do
     needs_configuration
 
