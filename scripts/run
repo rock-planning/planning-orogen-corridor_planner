@@ -38,17 +38,8 @@ do_compute = lambda do |task|
     task.terrain_classes = terrain_classes_file
     task.map = map_file
 
-    start = task.start_point
-    start.data[0] = startX
-    start.data[1] = startY
-    start.data[2] = 0
-    task.start_point = start
-
-    goal = task.target_point
-    goal.data[0] = goalX
-    goal.data[1] = goalY
-    goal.data[2] = 0
-    task.target_point = goal
+    task.start_point  = Types::Base::Vector3d.new(startX, startY, 0)
+    task.target_point = Types::Base::Vector3d.new(goalX, goalY, 0)
 
     task.margin    = expand_factor || 1.1
     task.min_width = 0.75

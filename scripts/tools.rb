@@ -1,5 +1,3 @@
-require 'corridor_planner/plan'
-
 def output_path(io, plan, path)
     io.puts "X Y Z"
     corridors = plan.corridors.to_a

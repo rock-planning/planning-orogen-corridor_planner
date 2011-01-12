@@ -2,7 +2,6 @@
 
 require 'orocos/log'
 require 'widget_grid'
-require 'corridor_plan'
 require 'base/typelib_plugin'
 
 if ARGV.size < 1 || ARGV.size > 2
