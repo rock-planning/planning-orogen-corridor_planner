@@ -7,10 +7,10 @@ ENV['PKG_CONFIG_PATH'] = "#{File.expand_path(File.dirname(__FILE__), File.join('
 Orocos.initialize
 
 def usage
-    STDERR.puts "run_following_test <logfile> [stream_name]"
-    STDERR.puts "where <logfile> contains either a stream of type /corridors/Corridor_m"
-    STDERR.puts "or a stream of type /corridors/Plan_m. If stream_name is given, it will"
-    STDERR.puts "be used"
+    STDERR.puts "display_paths <logfile> [path_index] [stream_name]"
+    STDERR.puts "where <logfile> contains at least one stream of type /corridors/Plan_m"
+    STDERR.puts "If stream_name is given, the stream with this name will be used"
+    STDERR.puts "If index is given, the initial path will be this path"
 end
 
 if ARGV.empty?
@@ -32,49 +32,65 @@ def do_test(follower, plan, initial_path_idx = 0)
 
     path_idx = initial_path_idx
     path_update = true
-    current_path = nil
-    corridor_count = nil
+    current_path = all_paths[path_idx]
+    corridor_start = 0
+    corridor_end   = current_path.size
 
     next_path = Qt::PushButton.new("Next path (current=#{path_idx})")
-    more_corridors = Qt::PushButton.new("More")
-    less_corridors = Qt::PushButton.new("Less")
+    start_corridor_later   = Qt::PushButton.new("Start later")
+    start_corridor_earlier = Qt::PushButton.new("Start earlier")
+    end_corridor_later   = Qt::PushButton.new("End later")
+    end_corridor_earlier = Qt::PushButton.new("End earlier")
+    buttons = Qt::Widget.new
+    v_layout = Qt::VBoxLayout.new(buttons)
+    v_layout.add_widget next_path
+    v_layout.add_widget start_corridor_later
+    v_layout.add_widget start_corridor_earlier
+    v_layout.add_widget end_corridor_later
+    v_layout.add_widget end_corridor_earlier
+    buttons.show
+
     next_path.connect(SIGNAL(:clicked)) do
         path_idx += 1
         if path_idx == all_paths.size
             path_idx = 0
         end
+        current_path = all_paths[path_idx]
+
         next_path.text = "Next path (current=#{path_idx})"
         path_update = true
-        corridor_count = nil
+        corridor_start = 0
+        corridor_end   = current_path.size
     end
-    more_corridors.connect(SIGNAL(:clicked)) do
-        corridor_count += 1
-        if corridor_count > current_path.size
-            corridor_count = current_path.size
+    start_corridor_later.connect(SIGNAL(:clicked)) do
+        if corridor_start != current_path.size - 1
+            corridor_start += 1
         end
         path_update = true
     end
-    less_corridors.connect(SIGNAL(:clicked)) do
-        corridor_count -= 1
-        if corridor_count < 0
-            corridor_count = 0
+    start_corridor_earlier.connect(SIGNAL(:clicked)) do
+        if corridor_start != 0
+            corridor_start -= 1
         end
         path_update = true
     end
-
-
-    buttons = Qt::Widget.new
-    v_layout = Qt::VBoxLayout.new(buttons)
-    v_layout.add_widget next_path
-    v_layout.add_widget more_corridors
-    v_layout.add_widget less_corridors
-    buttons.show
+    end_corridor_later.connect(SIGNAL(:clicked)) do
+        if corridor_end != current_path.size
+            corridor_end += 1
+        end
+        path_update = true
+    end
+    end_corridor_earlier.connect(SIGNAL(:clicked)) do
+        if corridor_end != 1
+            corridor_end -= 1
+        end
+        path_update = true
+    end
 
     gui.run(100) do
         if path_update
-            current_path = all_paths[path_idx]
-            corridor_count ||= current_path.size
-            path = current_path[0, corridor_count]
+            puts "#{corridor_start} #{corridor_end - corridor_start}"
+            path = current_path[corridor_start, corridor_end - corridor_start]
             current_corridor = plan.path_to_corridor(path)
             widget.updateSelectedCorridor(current_corridor)
             path_update = false
@@ -82,17 +98,22 @@ def do_test(follower, plan, initial_path_idx = 0)
     end
 end
 
-logfile     = ARGV.shift
-stream_name = nil
-initial_path = Integer(ARGV.shift || 0)
-logfile = Pocolog::Logfiles.open(logfile)
+logfile      = ARGV.shift
+initial_path = 0
+while !ARGV.empty?
+    if ARGV.first =~ /^\d+$/
+        initial_path = Integer(ARGV.shift)
+    else
+        stream_name = ARGV.shift
+    end
+end
 
+logfile = Pocolog::Logfiles.open(logfile)
 stream =
     if stream_name
         logfile.stream(stream_name)
     else
-        logfile.streams.find { |s| s.type.name == '/corridors/Corridor_m' } ||
-            logfile.streams.find { |s| s.type.name == '/corridors/Plan_m' }
+        logfile.streams.find { |s| s.type.name == '/corridors/Plan_m' }
     end
 
 samples = stream.samples.to_a
