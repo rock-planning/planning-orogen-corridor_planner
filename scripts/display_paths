@@ -1,113 +1,19 @@
 #! /usr/bin/env ruby
 
-require 'orocos'
-require 'widget_grid'
-require 'eigen'
-ENV['PKG_CONFIG_PATH'] = "#{File.expand_path(File.dirname(__FILE__), File.join('..', 'build'))}:#{ENV['PKG_CONFIG_PATH']}"
-Orocos.initialize
+require 'Qt4'
+require 'vizkit'
+require 'vizkittypelib'
+require 'pocolog'
 
-def usage
-    STDERR.puts "display_paths <logfile> [path_index] [stream_name]"
-    STDERR.puts "where <logfile> contains at least one stream of type /corridors/Plan_m"
-    STDERR.puts "If stream_name is given, the stream with this name will be used"
-    STDERR.puts "If index is given, the initial path will be this path"
-end
+include Pocolog
+include Orocos
+Orocos.load
+Orocos.load_typekit('base')
+Orocos.load_typekit('corridor_planner')
 
-if ARGV.empty?
-    usage
-    exit(1)
-end
-
-def do_test(follower, plan, initial_path_idx = 0)
-    Orocos.log_all
-    gui = WidgetGrid.new
-
-    all_paths = plan.all_paths
-
-    base_dir = File.expand_path(File.dirname(__FILE__))
-    widget = gui.display(follower.debugVfhTree, :env => File.join(base_dir, 'track-simple'), :pointcloud => [1, 100, 100, 0.25, 0.25], :position => :center)
-    widget.setTreeCostMode(0)
-    widget.removeTreeLeaves(false)
-    widget.updateCorridorPlan(plan)
-
-    path_idx = initial_path_idx
-    path_update = true
-    current_path = all_paths[path_idx]
-    corridor_start = 0
-    corridor_end   = current_path.size
-
-    next_path = Qt::PushButton.new("Next path (current=#{path_idx})")
-    start_corridor_later   = Qt::PushButton.new("Start later")
-    start_corridor_earlier = Qt::PushButton.new("Start earlier")
-    end_corridor_later   = Qt::PushButton.new("End later")
-    end_corridor_earlier = Qt::PushButton.new("End earlier")
-    buttons = Qt::Widget.new
-    v_layout = Qt::VBoxLayout.new(buttons)
-    v_layout.add_widget next_path
-    v_layout.add_widget start_corridor_later
-    v_layout.add_widget start_corridor_earlier
-    v_layout.add_widget end_corridor_later
-    v_layout.add_widget end_corridor_earlier
-    buttons.show
-
-    next_path.connect(SIGNAL(:clicked)) do
-        path_idx += 1
-        if path_idx == all_paths.size
-            path_idx = 0
-        end
-        current_path = all_paths[path_idx]
-
-        next_path.text = "Next path (current=#{path_idx})"
-        path_update = true
-        corridor_start = 0
-        corridor_end   = current_path.size
-    end
-    start_corridor_later.connect(SIGNAL(:clicked)) do
-        if corridor_start != current_path.size - 1
-            corridor_start += 1
-        end
-        path_update = true
-    end
-    start_corridor_earlier.connect(SIGNAL(:clicked)) do
-        if corridor_start != 0
-            corridor_start -= 1
-        end
-        path_update = true
-    end
-    end_corridor_later.connect(SIGNAL(:clicked)) do
-        if corridor_end != current_path.size
-            corridor_end += 1
-        end
-        path_update = true
-    end
-    end_corridor_earlier.connect(SIGNAL(:clicked)) do
-        if corridor_end != 1
-            corridor_end -= 1
-        end
-        path_update = true
-    end
-
-    gui.run(100) do
-        if path_update
-            puts "#{corridor_start} #{corridor_end - corridor_start}"
-            path = current_path[corridor_start, corridor_end - corridor_start]
-            current_corridor = plan.path_to_corridor(path)
-            widget.updateSelectedCorridor(current_corridor)
-            path_update = false
-        end
-    end
-end
-
-logfile      = ARGV.shift
-initial_path = 0
-while !ARGV.empty?
-    if ARGV.first =~ /^\d+$/
-        initial_path = Integer(ARGV.shift)
-    else
-        stream_name = ARGV.shift
-    end
-end
-
+# Load the sample from the log file
+logfile = ARGV.shift
+stream_name = ARGV.shift
 logfile = Pocolog::Logfiles.open(logfile)
 stream =
     if stream_name
@@ -120,16 +26,14 @@ samples = stream.samples.to_a
 if samples.empty?
     raise "no sample found"
 end
-
 data = samples.first.last
 
-begin
-    follower = Orocos::TaskContext.get 'corridor_following'
-    do_test(follower, data, initial_path)
-rescue Orocos::NotFound
-    Orocos.run 'corridorNavigationTest' do
-        follower = Orocos::TaskContext.get 'corridor_following'
-        do_test(follower, data, initial_path)
-    end
-end
+# Prepare the display and display it
+widget = Vizkit.default_loader.create_widget("vizkit::QVizkitWidget")
+vizkit_plugin = widget.createPlugin('corridor_planner')
+vizkit_plugin.setAlpha(0.1)
+vizkit_plugin.updatePlan(data)
+
+widget.show
+Vizkit.exec
 
