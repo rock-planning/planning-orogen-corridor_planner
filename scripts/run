@@ -1,48 +1,96 @@
 #! /usr/bin/env ruby
 
 require 'orocos'
-require 'tools'
+$LOAD_PATH.unshift File.expand_path(File.dirname(__FILE__))
+require 'corridor_plan_display_ui'
+require 'raster_map_view'
 include Orocos
 
-if ARGV.size != 7 && ARGV.size != 8
-    STDERR.puts "scripts/run [task_name] terrain_classes_file map_file goalX goalY startX startY expand_factor"
-    exit 1
-end
+# if ARGV.size != 7 && ARGV.size != 8
+#     STDERR.puts "scripts/run [task_name] terrain_classes_file envire_environment_path"
+#     exit 1
+# end
+
+require 'envire/gdal'
+require 'vizkit'
 
 BASE_DIR = File.expand_path('..', File.dirname(__FILE__))
 ENV['PKG_CONFIG_PATH'] = "#{File.join(BASE_DIR, 'build')}:#{ENV['PKG_CONFIG_PATH']}"
+
 Orocos.initialize
+Orocos.load_typekit 'corridor_planner'
 
-if ARGV.size == 8
-    task_name = ARGV.shift
-end
-
-terrain_classes_file = File.expand_path(ARGV.shift)
-map_file             = File.expand_path(ARGV.shift)
-if !File.exists?(terrain_classes_file)
-    STDERR.puts "#{terrain_classes_file} does not exist"
+classes_path = File.expand_path(ARGV.shift)
+map_path     = File.expand_path(ARGV.shift)
+if !File.exists?(classes_path)
+    STDERR.puts "#{classes_path} does not exist"
     exit 1
 end
-if !File.exists?(map_file)
-    STDERR.puts "#{map_file} does not exist"
+if !File.exists?(map_path)
+    STDERR.puts "#{map_path} does not exist"
     exit 1
 end
-
-goalX                = Float(ARGV.shift)
-goalY                = Float(ARGV.shift)
-startX               = Float(ARGV.shift)
-startY               = Float(ARGV.shift)
 expand_factor        = Float(ARGV.shift)
+mls_env = ARGV.shift
 
-do_compute = lambda do |task|
-    task.terrain_classes = terrain_classes_file
-    task.map = map_file
+# Get the UI
+main = Vizkit.default_loader.load(File.join(BASE_DIR, "scripts", "corridor_planner.ui"))
 
-    task.start_point  = Types::Base::Vector3d.new(startX, startY, 0)
-    task.target_point = Types::Base::Vector3d.new(goalX, goalY, 0)
+# Setup the map viewer. We will use it to pick the start and end point
+main.map_view.extend RasterMapView
+main.map_view.load(map_path)
+
+# Setup the vizkit widget. In this one, we display the resulting plan
+vizkit_widget = main.view3d
+corridor_view = vizkit_widget.createPlugin('corridor_planner')
+corridor_view.setAlpha(0.5)
+corridor_view.setZOffset(0.05)
+if mls_env
+    corridor_view.setMLS(mls_env)
+    envire_view = vizkit_widget.createPlugin('envire')
+    envire_view.load(mls_env)
+end
+
+# Setup the control UI for displaying the plan
+main.extend CorridorPlanControls
+main.setupControls
+main.corridor_view = corridor_view
+
+# Set the image view up so that we pick the start point / target point there
+start_point, target_point = nil, nil
+# Planner task is set at the end of the script
+planner_task = nil
+
+main.status.setText("select start point")
+main.map_view.connect(SIGNAL('clickImage(int,int)')) do |x, y|
+    if !start_point
+        start_point = main.map_view.viewToMap(x, y)
+        puts "start point: #{start_point.inspect} (pixels=#{x} #{y})"
+        main.status.setText("select target point")
+    else
+        target_point = main.map_view.viewToMap(x, y)
+        puts "target point: #{target_point.inspect} (pixels=#{x} #{y})"
+        main.status.setText("computing")
+        result = compute_plan(main.status, planner_task, map_path, classes_path, start_point, target_point, expand_factor)
+        if result
+            # corridor_view.updatePlan(result)
+            main.plan = result
+        else
+            main.status.setText("failed")
+        end
+        start_point = target_point = nil
+    end
+end
+
+def compute_plan(status, task, map_path, classes_path, start_point, target_point, expand_factor)
+    task.terrain_classes = classes_path
+    task.map = map_path
+
+    task.start_point  = Types::Base::Vector3d.new(start_point[0], start_point[1], 0)
+    task.target_point = Types::Base::Vector3d.new(target_point[0], target_point[1], 0)
 
     task.margin    = expand_factor || 1.1
-    task.min_width = 0.75
+    task.min_width = 0
 
     task.configure
     task.start
@@ -55,39 +103,36 @@ do_compute = lambda do |task|
         while task.state_changed?
             last_state = task.state(false)
             STDERR.puts last_state
+            if status
+                status.setText(last_state.to_s)
+                $qApp.processEvents
+            end
         end
 
         if task.error?
             STDERR.puts "Failed ..."
+            task.reset_exception
             break
         elsif !task.running?
             plan = result_reader.read
             STDERR.puts "found #{plan.corridors.size} corridors"
             File.open('result.dot', 'w') do |io|
-                io.write result_reader.read.to_dot
+                io.write plan.to_dot
             end
             break
         end
         sleep 0.1
     end
+    plan
 end
 
-if task_name
-    task = TaskContext.get(task_name)
-    if task.state == :STOPPED
-        task.cleanup
-    elsif task.state == :RUNNING
-        task.stop
-        task.cleanup
-    end
-    do_compute[task]
-else
-    Orocos::Process.spawn 'test_corridor_planner', :output => 'cplanner-log.txt' do |p|
-        task = p.task('planner')
-
-        Orocos.log_all_ports
-        Orocos.log_all_configuration
-        do_compute[task]
-    end
+Orocos::Process.spawn 'test_corridor_planner', :output => 'cplanner-log.txt' do |p|
+    planner_task = p.task('planner')
+    Orocos.log_all_ports
+    Orocos.log_all_configuration
+    main.show
+    main.view3d.show
+    Vizkit.exec
 end
+exit(0)
 
