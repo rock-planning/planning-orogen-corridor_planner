@@ -67,9 +67,18 @@ main.map_view.connect(SIGNAL('clickImage(int,int)')) do |x, y|
         start_point = main.map_view.viewToMap(x, y)
         puts "start point: #{start_point.inspect} (pixels=#{x} #{y})"
         main.status.setText("select target point")
+        vizkit_widget.centralWidget.setCameraLookAt(start_point[0], start_point[1], 0)
+        vizkit_widget.centralWidget.setCameraEye(start_point[0], start_point[1], 10)
     else
         target_point = main.map_view.viewToMap(x, y)
         puts "target point: #{target_point.inspect} (pixels=#{x} #{y})"
+
+        median_point = start_point.zip(target_point).map { |a, b| (a + b) / 2 }
+        up_vector    = start_point.zip(target_point).map { |a, b| (b - a) }
+        length = Math.sqrt(up_vector.inject(0) { |length, v| v * v })
+        vizkit_widget.centralWidget.setCameraLookAt(median_point[0], median_point[1], 0)
+        vizkit_widget.centralWidget.setCameraEye(median_point[0], median_point[1], length)
+        vizkit_widget.centralWidget.setCameraUp(up_vector[0], up_vector[1], 0)
         main.status.setText("computing")
         result = compute_plan(main.status, planner_task, map_path, classes_path, start_point, target_point, expand_factor)
         if result
@@ -105,7 +114,6 @@ def compute_plan(status, task, map_path, classes_path, start_point, target_point
             STDERR.puts last_state
             if status
                 status.setText(last_state.to_s)
-                $qApp.processEvents
             end
         end
 
@@ -121,6 +129,7 @@ def compute_plan(status, task, map_path, classes_path, start_point, target_point
             end
             break
         end
+        $qApp.processEvents
         sleep 0.1
     end
     plan
