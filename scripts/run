@@ -2,8 +2,9 @@
 
 require 'orocos'
 $LOAD_PATH.unshift File.expand_path(File.dirname(__FILE__))
-require 'corridor_plan_display_ui'
-require 'raster_map_view'
+require 'vizkit'
+require 'corridor_plan_controls'
+require 'envire/raster_map_view'
 include Orocos
 
 # if ARGV.size != 7 && ARGV.size != 8
@@ -12,7 +13,6 @@ include Orocos
 # end
 
 require 'envire/gdal'
-require 'vizkit'
 
 BASE_DIR = File.expand_path('..', File.dirname(__FILE__))
 ENV['PKG_CONFIG_PATH'] = "#{File.join(BASE_DIR, 'build')}:#{ENV['PKG_CONFIG_PATH']}"
