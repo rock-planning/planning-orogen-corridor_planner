@@ -9,8 +9,13 @@
     </copyright>
   <license>GPL v2 or later</license>
 
+  <!-- Strong dependencies -->
   <depend package="base/orogen/types"/>
-  <depend package="tools/logger"/>
-  <depend package="orogen"/>
   <depend package="planning/corridor_planner"/>
+
+  <!-- Needed for scripts in scripts/ -->
+  <depend package="gui/vizkit" optional="1" />
+
+  <!-- Needed for test deployment -->
+  <depend package="tools/logger"/>
 </package>
