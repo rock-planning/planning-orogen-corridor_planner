@@ -16,6 +16,15 @@ bool Task::configureHook()
     delete planner;
     planner  = new corridor_planner::CorridorPlanner();
     planner->init(_terrain_classes.get(), _map.get(), _min_width.get());
+
+    if (!_strong_edge_path.get().empty())
+    {
+        planner->setStrongEdgeFilter(_strong_edge_path.get(),
+                _strong_edge_map.get(),
+                _strong_edge_band.get(),
+                _strong_edge_threshold.get());
+    }
+
     return true;
 }
 
@@ -54,11 +63,16 @@ void Task::updateHook()
     else if (state() == PLAN_SIMPLIFICATION)
     {
         planner->simplifyPlan();
+        state(ANNOTATIONS);
+    }
+    else if (state() == ANNOTATIONS)
+    {
+        planner->annotateCorridors();
+        planner->done();
         _plan.write(planner->result());
         stop();
         return;
     }
-
     getActivity()->trigger();
 }
 
