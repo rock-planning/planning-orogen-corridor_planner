@@ -20,6 +20,13 @@ opt_parse = OptionParser.new do |opt|
     opt.on('-t TASK_NAME', String, 'connect to the given task instead of starting our own') do |name|
         task_name = name
     end
+    opt.on('-f PATH:MAP:BAND:THRESHOLD', String, 'run a strong edge annotation filter on the resulting corridors') do |config|
+        config = config.split(':')
+        strong_edge_path = config[0]
+        strong_edge_map = Integer(config[1])
+        strong_edge_band = config[2]
+        strong_edge_threshold = Float(config[3])
+    end
 end
 
 remaining = opt_parse.parse(ARGV)
@@ -60,6 +67,7 @@ vizkit_widget = main.view3d
 corridor_view = vizkit_widget.createPlugin('corridor_planner')
 corridor_view.setAlpha(0.5)
 corridor_view.setZOffset(0.05)
+corridor_view.setDisplayedAnnotation("STRONG_EDGE")
 if mls_env
     corridor_view.setMLS(mls_env)
     envire_view = vizkit_widget.createPlugin('envire')
@@ -95,7 +103,13 @@ main.map_view.connect(SIGNAL('clickImage(int,int)')) do |x, y|
         vizkit_widget.centralWidget.setCameraEye(median_point[0], median_point[1], length)
         vizkit_widget.centralWidget.setCameraUp(up_vector[0], up_vector[1], 0)
         main.status.setText("computing")
-        result = compute_plan(main.status, planner_task, map_path, classes_path, start_point, target_point, expand_factor)
+
+        strong_filter =
+            if strong_edge_path
+                [strong_edge_path, strong_edge_map, strong_edge_band, strong_edge_threshold]
+            end
+
+        result = compute_plan(main.status, planner_task, map_path, classes_path, start_point, target_point, expand_factor, strong_filter)
         if result
             corridor_view.updatePlan(result)
             main.plan = result
@@ -106,7 +120,7 @@ main.map_view.connect(SIGNAL('clickImage(int,int)')) do |x, y|
     end
 end
 
-def compute_plan(status, task, map_path, classes_path, start_point, target_point, expand_factor)
+def compute_plan(status, task, map_path, classes_path, start_point, target_point, expand_factor, strong_edge_filter)
     task.terrain_classes = classes_path
     task.map = map_path
 
@@ -115,6 +129,12 @@ def compute_plan(status, task, map_path, classes_path, start_point, target_point
 
     task.margin    = expand_factor || 1.1
     task.min_width = 0
+    if strong_edge_filter
+        task.strong_edge_path = strong_edge_filter[0]
+        task.strong_edge_map  = strong_edge_filter[1]
+        task.strong_edge_band  = strong_edge_filter[2]
+        task.strong_edge_threshold  = strong_edge_filter[3]
+    end
 
     task.configure
     task.start
