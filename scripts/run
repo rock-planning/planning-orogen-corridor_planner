@@ -123,6 +123,7 @@ def compute_plan(status, task, map_path, classes_path, start_point, target_point
     result_reader = task.plan.reader
 
     last_state = nil
+    is_running = false
     while true
         while task.state_changed?
             last_state = task.state(false)
@@ -130,19 +131,25 @@ def compute_plan(status, task, map_path, classes_path, start_point, target_point
             if status
                 status.setText(last_state.to_s)
             end
-        end
-
-        if task.error?
-            STDERR.puts "Failed ..."
-            task.reset_exception
-            break
-        elsif !task.running?
-            plan = result_reader.read
-            STDERR.puts "found #{plan.corridors.size} corridors"
-            File.open('result.dot', 'w') do |io|
-                io.write plan.to_dot
+            if !is_running
+                if last_state == :RUNNING
+                    is_running = true
+                end
             end
-            break
+        end
+        if is_running
+            if task.error?
+                STDERR.puts "Failed ..."
+                task.reset_exception
+                break
+            elsif !task.running?
+                plan = result_reader.read
+                STDERR.puts "found #{plan.corridors.size} corridors"
+                File.open('result.dot', 'w') do |io|
+                    io.write plan.to_dot
+                end
+                break
+            end
         end
         $qApp.processEvents
         sleep 0.1
