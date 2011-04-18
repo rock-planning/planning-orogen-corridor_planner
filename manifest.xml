@@ -15,6 +15,7 @@
 
   <!-- Needed for scripts in scripts/ -->
   <depend package="gui/vizkit" optional="1" />
+  <depend package="gui/rock_widget_collection" optional="1" />
 
   <!-- Needed for test deployment -->
   <depend package="tools/logger"/>
