@@ -5,12 +5,27 @@ $LOAD_PATH.unshift File.expand_path(File.dirname(__FILE__))
 require 'vizkit'
 require 'corridor_plan_controls'
 require 'envire/raster_map_view'
+require 'optparse'
 include Orocos
 
-# if ARGV.size != 7 && ARGV.size != 8
-#     STDERR.puts "scripts/run [task_name] terrain_classes_file envire_environment_path"
-#     exit 1
-# end
+def usage
+    STDERR.puts "scripts/run [-t task_name] <classes_file> <map_file> <expand_factor> [mls_env]"
+    exit 1
+end
+
+task_name = nil
+strong_edge_path, strong_edge_map, strong_edge_band, strong_edge_threshold = nil
+opt_parse = OptionParser.new do |opt|
+    opt.banner = "run [-t task_name] <classes_file> <map_file> <expand_factor> [mls_env]"
+    opt.on('-t TASK_NAME', String, 'connect to the given task instead of starting our own') do |name|
+        task_name = name
+    end
+end
+
+remaining = opt_parse.parse(ARGV)
+if remaining.size != 3 && remaining.size != 4
+    exit 1
+end
 
 require 'envire/gdal'
 
@@ -20,8 +35,8 @@ ENV['PKG_CONFIG_PATH'] = "#{File.join(BASE_DIR, 'build')}:#{ENV['PKG_CONFIG_PATH
 Orocos.initialize
 Orocos.load_typekit 'corridor_planner'
 
-classes_path = File.expand_path(ARGV.shift)
-map_path     = File.expand_path(ARGV.shift)
+classes_path = File.expand_path(remaining.shift)
+map_path     = File.expand_path(remaining.shift)
 if !File.exists?(classes_path)
     STDERR.puts "#{classes_path} does not exist"
     exit 1
@@ -30,8 +45,8 @@ if !File.exists?(map_path)
     STDERR.puts "#{map_path} does not exist"
     exit 1
 end
-expand_factor        = Float(ARGV.shift)
-mls_env = ARGV.shift
+expand_factor        = Float(remaining.shift)
+mls_env = remaining.shift
 
 # Get the UI
 main = Vizkit.default_loader.load(File.join(BASE_DIR, "scripts", "corridor_planner.ui"))
@@ -82,7 +97,7 @@ main.map_view.connect(SIGNAL('clickImage(int,int)')) do |x, y|
         main.status.setText("computing")
         result = compute_plan(main.status, planner_task, map_path, classes_path, start_point, target_point, expand_factor)
         if result
-            # corridor_view.updatePlan(result)
+            corridor_view.updatePlan(result)
             main.plan = result
         else
             main.status.setText("failed")
@@ -135,13 +150,19 @@ def compute_plan(status, task, map_path, classes_path, start_point, target_point
     plan
 end
 
-Orocos::Process.spawn 'test_corridor_planner', :output => 'cplanner-log.txt' do |p|
-    planner_task = p.task('planner')
-    Orocos.log_all_ports
-    Orocos.log_all_configuration
+if task_name
+    planner_task = Orocos::TaskContext.get task_name
     main.show
     main.view3d.show
     Vizkit.exec
+else
+    Orocos::Process.spawn 'test_corridor_planner', :output => 'cplanner-log.txt' do |p|
+        planner_task = p.task('planner')
+        Orocos.log_all_ports
+        Orocos.log_all_configuration
+        main.show
+        main.view3d.show
+        Vizkit.exec
+    end
 end
-exit(0)
 
