@@ -1,0 +1,89 @@
+#! /usr/bin/env ruby
+
+require 'orocos'
+$LOAD_PATH.unshift File.expand_path(File.dirname(__FILE__))
+require 'vizkit'
+require 'corridor_plan_controls'
+require 'optparse'
+include Orocos
+
+task_name = nil
+opt_parse = OptionParser.new do |opt|
+    opt.banner = "display <log_file|-t task> [mls_env]"
+    opt.on('-t TASK_NAME', String, 'connect to the given task instead of starting our own') do |name|
+        task_name = name
+    end
+end
+
+remaining = opt_parse.parse(ARGV)
+if task_name
+    mls_env = remaining.shift
+else
+    logfile = remaining.shift
+    mls_env = remaining.shift
+end
+
+if !remaining.empty?
+    puts opt_parse
+    exit 1
+end
+
+Orocos.load
+Orocos.load_typekit 'corridor_planner'
+require 'pocolog'
+
+mls_env = remaining.shift
+
+# Get the UI
+BASE_DIR = File.expand_path('..', File.dirname(__FILE__))
+main = Vizkit.default_loader.load(File.join(BASE_DIR, "scripts", "corridor_planner.ui"))
+
+# Setup the map viewer. We will use it to pick the start and end point
+main.map_view.hide
+
+# Setup the vizkit widget. In this one, we display the resulting plan
+vizkit_widget = main.view3d
+corridor_view = vizkit_widget.createPlugin('corridor_planner')
+corridor_view.setAlpha(0.5)
+corridor_view.setZOffset(0.05)
+corridor_view.setDisplayedAnnotation("STRONG_EDGE")
+if mls_env
+    corridor_view.setMLS(mls_env)
+    envire_view = vizkit_widget.createPlugin('envire')
+    envire_view.load(mls_env)
+end
+
+# Setup the control UI for displaying the plan
+main.extend CorridorPlanControls
+main.setupControls
+main.corridor_view = corridor_view
+
+def update(main, plan)
+    strong_filter_cleanup =
+        [nil, [1, 0.5], nil]
+    plan.corridors.each_with_index do |c, idx|
+        puts "corridor #{idx}"
+        pp c.annotations
+    end
+    #plan.cleanup_annotations("STRONG_EDGE", strong_filter_cleanup)
+    main.corridor_view.updatePlan(plan)
+    main.plan = plan
+end
+
+main.show
+main.view3d.show
+
+if task_name
+    planner_task = Orocos::TaskContext.get task_name
+    planner_task.plan.connect_to do |sample|
+        update(main, sample)
+    end
+else
+    require 'pocolog'
+    file = Pocolog::Logfiles.open(logfile)
+    stream = file.stream_from_type(Types::Corridors::Plan)
+    data = stream.first.last
+    update(main, data)
+end
+Vizkit.exec
+
