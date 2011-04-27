@@ -32,8 +32,6 @@ Orocos.load
 Orocos.load_typekit 'corridor_planner'
 require 'pocolog'
 
-mls_env = remaining.shift
-
 # Get the UI
 BASE_DIR = File.expand_path('..', File.dirname(__FILE__))
 main = Vizkit.default_loader.load(File.join(BASE_DIR, "scripts", "corridor_planner.ui"))
@@ -46,7 +44,6 @@ vizkit_widget = main.view3d
 corridor_view = vizkit_widget.createPlugin('corridor_planner')
 corridor_view.setAlpha(0.5)
 corridor_view.setZOffset(0.05)
-corridor_view.setDisplayedAnnotation("STRONG_EDGE")
 if mls_env
     corridor_view.setMLS(mls_env)
     envire_view = vizkit_widget.createPlugin('envire')
@@ -59,14 +56,11 @@ main.setupControls
 main.corridor_view = corridor_view
 
 def update(main, plan)
-    strong_filter_cleanup =
-        [nil, [1, 0.5], nil]
-    plan.corridors.each_with_index do |c, idx|
-        puts "corridor #{idx}"
-        pp c.annotations
-    end
+    puts "start point: #{plan.corridors[plan.start_corridor].median_curve.start_point.to_a.inspect}"
+    puts "target point: #{plan.corridors[plan.end_corridor].median_curve.start_point.to_a.inspect}"
+    #strong_filter_cleanup =
+    #    [nil, [1, 0.5], nil]
     #plan.cleanup_annotations("STRONG_EDGE", strong_filter_cleanup)
-    main.corridor_view.updatePlan(plan)
     main.plan = plan
 end
 
@@ -83,6 +77,7 @@ else
     file = Pocolog::Logfiles.open(logfile)
     stream = file.stream_from_type(Types::Corridors::Plan)
     data = stream.first.last
+
     update(main, data)
 end
 Vizkit.exec

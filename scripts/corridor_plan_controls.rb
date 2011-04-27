@@ -1,17 +1,27 @@
 module CorridorPlanControls
-    attr_accessor :corridor_view
-
     attr_accessor :plan
     attr_accessor :all_paths
     attr_accessor :current_path_idx
     attr_accessor :corridor_start
     attr_accessor :corridor_end
 
+    attr_reader :map_path
+    attr_reader :mls_env
+    attr_accessor :classes_path
+    attr_reader :strong_edge_filter
+    attr_accessor :min_width
+    attr_accessor :expand_factor
+
+    attr_reader :vizkit_envire
+    attr_reader :vizkit_corridors
+
     def plan=(plan)
+        grpPath.setEnabled(true)
+        grpAnnotations.setEnabled(true)
         @plan = plan
-        pp plan
+        @show_all = false
         @all_paths = plan.all_paths
-        corridor_view.clearCorridors(0)
+        vizkit_corridors.clearCorridors(0)
         if !@all_paths.empty?
             status.setText("#{@all_paths.size} paths in plan")
             @all_paths.each do  |p|
@@ -22,18 +32,116 @@ module CorridorPlanControls
         else
             status.setText("Empty plan")
         end
+
+        vizkit_corridors.updatePlan(plan)
+        update_symbols
     end
+
+    StrongEdgeFilterConfig = Struct.new :path, :map, :band, :threshold
+
+    def enable_strong_edge_filter(path, map, band, threshold)
+        @strong_edge_filter = StrongEdgeFilterConfig.new(path, map, band, threshold)
+    end
+
+    def disable_strong_edge_filter
+        @strong_edge_filter = nil
+    end
+
+    def compute(planner_task, start_point, target_point)
+        puts start_point.to_a.inspect
+        puts target_point.to_a.inspect
+        # First, update the viewpoint of the 3D view
+        median_point = start_point.to_a.zip(target_point.to_a).map { |a, b| (a + b) / 2 }
+        up_vector    = start_point.to_a.zip(target_point.to_a).map { |a, b| (b - a) }
+        length = Math.sqrt(up_vector.inject(0) { |length, v| length + v * v })
+        puts median_point.inspect
+        puts length
+        puts up_vector.inspect
+        view3d.centralWidget.setCameraLookAt(median_point[0], median_point[1], 0)
+        view3d.centralWidget.setCameraEye(median_point[0], median_point[1], length)
+        view3d.centralWidget.setCameraUp(up_vector[0], up_vector[1], 0)
+
+        # Update the status field
+        status.setText("computing")
+
+        result = compute_plan(planner_task, start_point, target_point)
+        if result
+            puts "result: #{result.corridors.size}"
+            yield(result) if block_given?
+            self.plan = result
+        else
+            status.setText("failed")
+        end
+    end
+
+    def compute_plan(task, start_point, target_point)
+        task.terrain_classes = classes_path
+        task.map = map_path
+
+        task.start_point  = start_point
+        task.target_point = target_point
+
+        task.margin    = expand_factor || 1.1
+        task.min_width = min_width || 0.75
+        if strong_edge_filter
+            task.strong_edge_path = strong_edge_filter.path
+            task.strong_edge_map  = strong_edge_filter.map
+            task.strong_edge_band  = strong_edge_filter.band
+            task.strong_edge_threshold  = strong_edge_filter.threshold
+        end
+
+        task.configure
+        task.start
+
+        # To get the result when the task finished
+        result_reader = task.plan.reader
+
+        last_state = nil
+        is_running = false
+        while true
+            while task.state_changed?
+                last_state = task.state(false)
+                STDERR.puts last_state
+                status.setText(last_state.to_s)
+                if !is_running
+                    if last_state == :RUNNING
+                        is_running = true
+                    end
+                end
+            end
+            if is_running
+                if task.error?
+                    STDERR.puts "Failed ..."
+                    task.reset_exception
+                    break
+                elsif !task.running?
+                    plan = result_reader.read
+                    STDERR.puts "found #{plan.corridors.size} corridors (graph written to result.dot)"
+                    File.open('result.dot', 'w') do |io|
+                        io.write plan.to_dot
+                    end
+                    break
+                end
+            end
+            $qApp.processEvents
+            sleep 0.1
+        end
+        plan
+    end
+
 
     def setPath(path_idx)
         pathIdx.setValue(path_idx)
-        corridor_view.clearCorridors(0)
+        vizkit_corridors.clearCorridors(0)
 
         if path_idx == -1
-            @all_paths.each do |p|
-                begin
-                    corridor = plan.path_to_corridor(p)
-                    corridor_view.displayCorridor(corridor)
-                rescue
+            if @show_all
+                @all_paths.each do |p|
+                    begin
+                        corridor = plan.path_to_corridor(p)
+                        vizkit_corridors.displayCorridor(corridor)
+                    rescue
+                    end
                 end
             end
         else
@@ -50,7 +158,25 @@ module CorridorPlanControls
         all_paths[pathIdx.value]
     end
 
-    def setupControls
+    def map_path=(path)
+        map_view.load(path)
+        @map_path = path
+    end
+
+    def mls_env=(path)
+        vizkit_corridors.setMLS(path)
+        @vizkit_envire ||= view3d.createPlugin('envire')
+        vizkit_envire.load(path)
+        @mls_env = path
+    end
+
+    def setupUI
+        @vizkit_corridors = view3d.createPlugin('corridor_planner')
+        vizkit_corridors.setAlpha(0.5)
+        vizkit_corridors.setZOffset(0.05)
+
+        map_view.extend RasterMapView
+
         pathIdx.connect(SIGNAL('valueChanged(int)')) do |idx|
             setPath(idx)
         end
@@ -62,6 +188,41 @@ module CorridorPlanControls
             startIdx.setMaximum(idx - 1)
             update_path
         end
+        lstSymbol.connect(SIGNAL('activated(QString const&)')) do |value|
+            if value == "None"
+                annotateSymbolIdx.enabled = false
+                btnAnnotateCorridor.enabled = false
+                vizkit_corridors.setDisplayedAnnotation("")
+            else
+                annotateSymbolIdx.enabled = true
+                btnAnnotateCorridor.enabled = true
+                vizkit_corridors.setDisplayedAnnotation(value)
+            end
+        end
+
+        btnAnnotateCorridor.connect(SIGNAL('clicked()')) do
+            plan.annotate_corridor_segments(
+                lstSymbol.currentText, annotateSymbolIdx.value,
+                lstSymbol.currentText)
+        end
+    end
+
+    def update_symbols
+        if lstSymbol.count != 0
+            currentSymbol = lstSymbol.currentText
+        end
+
+        lstSymbol.clear
+        lstSymbol.addItem("None", Qt::Variant.new(-1))
+        plan.annotation_symbols.each_with_index do |symbol_name, idx|
+            lstSymbol.addItem(symbol_name, Qt::Variant.new(idx))
+        end
+        if currentSymbol
+            idx = lstSymbol.findText(currentSymbol)
+            if idx != -1
+                lstSymbol.setCurrentIndex(idx)
+            end
+        end
     end
 
     def update_path
@@ -69,11 +230,14 @@ module CorridorPlanControls
             begin
                 path = current_path[startIdx.value, endIdx.value - startIdx.value]
                 current_corridor = plan.path_to_corridor(path)
-                corridor_view.clearCorridors(0)
-                corridor_view.displayCorridor(current_corridor)
+                vizkit_corridors.clearCorridors(0)
+                vizkit_corridors.displayCorridor(current_corridor)
             rescue Exception => e
                 STDERR.puts "ERROR: cannot display path #{path.inspect}"
                 STDERR.puts "ERROR:   #{e.message}"
+                e.backtrace.each do |line|
+                    STDERR.puts "ERROR:     #{line}"
+                end
             end
         end
     end

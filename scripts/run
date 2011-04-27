@@ -15,8 +15,11 @@ end
 
 task_name = nil
 strong_edge_path, strong_edge_map, strong_edge_band, strong_edge_threshold = nil
+problem = nil
+min_width = nil
+
 opt_parse = OptionParser.new do |opt|
-    opt.banner = "run [-t task_name] <classes_file> <map_file> <expand_factor> [mls_env]"
+    opt.banner = "run [options] <map_file> <classes_file> <expand_factor> [mls_env]"
     opt.on('-t TASK_NAME', String, 'connect to the given task instead of starting our own') do |name|
         task_name = name
     end
@@ -26,6 +29,17 @@ opt_parse = OptionParser.new do |opt|
         strong_edge_map = Integer(config[1])
         strong_edge_band = config[2]
         strong_edge_threshold = Float(config[3])
+    end
+
+    opt.on('--min-width=WIDTH', Float) do |value|
+        min_width = value
+    end
+
+    opt.on('--problem=START_X:START_Y:GOAL_X:GOAL_Y', String, 'specifies the start and goal points instead of using the point-and-click GUI') do |problem|
+        problem = problem.split(':').map { |v| Float(v) }
+        problem = [
+            Eigen::Vector3.new(problem[0], problem[1], 0),
+            Eigen::Vector3.new(problem[2], problem[3], 0)]
     end
 end
 
@@ -42,8 +56,8 @@ ENV['PKG_CONFIG_PATH'] = "#{File.join(BASE_DIR, 'build')}:#{ENV['PKG_CONFIG_PATH
 Orocos.initialize
 Orocos.load_typekit 'corridor_planner'
 
-classes_path = File.expand_path(remaining.shift)
 map_path     = File.expand_path(remaining.shift)
+classes_path = File.expand_path(remaining.shift)
 if !File.exists?(classes_path)
     STDERR.puts "#{classes_path} does not exist"
     exit 1
@@ -57,27 +71,16 @@ mls_env = remaining.shift
 
 # Get the UI
 main = Vizkit.default_loader.load(File.join(BASE_DIR, "scripts", "corridor_planner.ui"))
-
-# Setup the map viewer. We will use it to pick the start and end point
-main.map_view.extend RasterMapView
-main.map_view.load(map_path)
-
-# Setup the vizkit widget. In this one, we display the resulting plan
-vizkit_widget = main.view3d
-corridor_view = vizkit_widget.createPlugin('corridor_planner')
-corridor_view.setAlpha(0.5)
-corridor_view.setZOffset(0.05)
-corridor_view.setDisplayedAnnotation("STRONG_EDGE")
-if mls_env
-    corridor_view.setMLS(mls_env)
-    envire_view = vizkit_widget.createPlugin('envire')
-    envire_view.load(mls_env)
-end
-
-# Setup the control UI for displaying the plan
 main.extend CorridorPlanControls
-main.setupControls
-main.corridor_view = corridor_view
+main.setupUI
+main.map_path = map_path
+main.mls_env = mls_env
+main.classes_path = classes_path
+main.min_width = min_width
+main.expand_factor = expand_factor
+if strong_edge_path
+    main.enable_strong_edge_filter(strong_edge_path, strong_edge_map, strong_edge_band, strong_edge_threshold)
+end
 
 # Set the image view up so that we pick the start point / target point there
 start_point, target_point = nil, nil
@@ -90,105 +93,34 @@ main.map_view.connect(SIGNAL('clickImage(int,int)')) do |x, y|
         start_point = main.map_view.viewToMap(x, y)
         puts "start point: #{start_point.inspect} (pixels=#{x} #{y})"
         main.status.setText("select target point")
-        vizkit_widget.centralWidget.setCameraLookAt(start_point[0], start_point[1], 0)
-        vizkit_widget.centralWidget.setCameraEye(start_point[0], start_point[1], 10)
+        main.view3d.centralWidget.setCameraLookAt(start_point[0], start_point[1], 0)
+        main.view3d.centralWidget.setCameraEye(start_point[0], start_point[1], 10)
     else
         target_point = main.map_view.viewToMap(x, y)
         puts "target point: #{target_point.inspect} (pixels=#{x} #{y})"
-
-        median_point = start_point.zip(target_point).map { |a, b| (a + b) / 2 }
-        up_vector    = start_point.zip(target_point).map { |a, b| (b - a) }
-        length = Math.sqrt(up_vector.inject(0) { |length, v| v * v })
-        vizkit_widget.centralWidget.setCameraLookAt(median_point[0], median_point[1], 0)
-        vizkit_widget.centralWidget.setCameraEye(median_point[0], median_point[1], length)
-        vizkit_widget.centralWidget.setCameraUp(up_vector[0], up_vector[1], 0)
-        main.status.setText("computing")
-
-        strong_filter =
-            if strong_edge_path
-                [strong_edge_path, strong_edge_map, strong_edge_band, strong_edge_threshold]
-            end
-
-        result = compute_plan(main.status, planner_task, map_path, classes_path, start_point, target_point, expand_factor, strong_filter)
-        if result
-            corridor_view.updatePlan(result)
-            main.plan = result
-        else
-            main.status.setText("failed")
-        end
+        main.compute(planner_task, start_point, target_point)
         start_point = target_point = nil
     end
 end
 
-def compute_plan(status, task, map_path, classes_path, start_point, target_point, expand_factor, strong_edge_filter)
-    task.terrain_classes = classes_path
-    task.map = map_path
-
-    task.start_point  = Types::Base::Vector3d.new(start_point[0], start_point[1], 0)
-    task.target_point = Types::Base::Vector3d.new(target_point[0], target_point[1], 0)
-
-    task.margin    = expand_factor || 1.1
-    task.min_width = 0
-    if strong_edge_filter
-        task.strong_edge_path = strong_edge_filter[0]
-        task.strong_edge_map  = strong_edge_filter[1]
-        task.strong_edge_band  = strong_edge_filter[2]
-        task.strong_edge_threshold  = strong_edge_filter[3]
+def common_setup(main, planner_task, problem)
+    main.show
+    main.view3d.show
+    if problem
+        main.compute(planner_task, problem[0], problem[1])
     end
-
-    task.configure
-    task.start
-
-    # To get the result when the task finished
-    result_reader = task.plan.reader
-
-    last_state = nil
-    is_running = false
-    while true
-        while task.state_changed?
-            last_state = task.state(false)
-            STDERR.puts last_state
-            if status
-                status.setText(last_state.to_s)
-            end
-            if !is_running
-                if last_state == :RUNNING
-                    is_running = true
-                end
-            end
-        end
-        if is_running
-            if task.error?
-                STDERR.puts "Failed ..."
-                task.reset_exception
-                break
-            elsif !task.running?
-                plan = result_reader.read
-                STDERR.puts "found #{plan.corridors.size} corridors"
-                File.open('result.dot', 'w') do |io|
-                    io.write plan.to_dot
-                end
-                break
-            end
-        end
-        $qApp.processEvents
-        sleep 0.1
-    end
-    plan
 end
 
 if task_name
     planner_task = Orocos::TaskContext.get task_name
-    main.show
-    main.view3d.show
+    common_setup(main, planner_task)
     Vizkit.exec
 else
     Orocos::Process.spawn 'test_corridor_planner', :output => 'cplanner-log.txt' do |p|
         planner_task = p.task('planner')
         Orocos.log_all_ports
         Orocos.log_all_configuration
-        main.show
-        main.view3d.show
+        common_setup(main, planner_task, problem)
         Vizkit.exec
     end
 end
