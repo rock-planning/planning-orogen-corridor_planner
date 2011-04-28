@@ -9,6 +9,7 @@ module CorridorPlanControls
     attr_reader :mls_env
     attr_accessor :classes_path
     attr_reader :strong_edge_filter
+    attr_reader :narrow_wide_filter
     attr_accessor :min_width
     attr_accessor :expand_factor
 
@@ -37,14 +38,29 @@ module CorridorPlanControls
         update_symbols
     end
 
-    StrongEdgeFilterConfig = Struct.new :path, :map, :band, :threshold
+    StrongEdgeFilterConfig = Types::CorridorPlanner::StrongEdgeFilterConfig
+    NarrowWideFilterConfig = Types::CorridorPlanner::NarrowWideFilterConfig
 
     def enable_strong_edge_filter(path, map, band, threshold)
-        @strong_edge_filter = StrongEdgeFilterConfig.new(path, map, band, threshold)
+        @strong_edge_filter = StrongEdgeFilterConfig.new
+        strong_edge_filter.env_path = path
+        strong_edge_filter.map_id = map
+        strong_edge_filter.band_name = band
+        strong_edge_filter.threshold = threshold
     end
 
     def disable_strong_edge_filter
         @strong_edge_filter = nil
+    end
+
+    def enable_narrow_wide_filter(narrow_threshold, wide_threshold)
+        @narrow_wide_filter = NarrowWideFilterConfig.new
+        narrow_wide_filter.narrow_threshold = narrow_threshold
+        narrow_wide_filter.wide_threshold = wide_threshold
+    end
+
+    def disable_strong_edge_filter
+        @narrow_wide_filter = nil
     end
 
     def compute(planner_task, start_point, target_point)
@@ -54,9 +70,6 @@ module CorridorPlanControls
         median_point = start_point.to_a.zip(target_point.to_a).map { |a, b| (a + b) / 2 }
         up_vector    = start_point.to_a.zip(target_point.to_a).map { |a, b| (b - a) }
         length = Math.sqrt(up_vector.inject(0) { |length, v| length + v * v })
-        puts median_point.inspect
-        puts length
-        puts up_vector.inspect
         view3d.centralWidget.setCameraLookAt(median_point[0], median_point[1], 0)
         view3d.centralWidget.setCameraEye(median_point[0], median_point[1], length)
         view3d.centralWidget.setCameraUp(up_vector[0], up_vector[1], 0)
@@ -66,7 +79,6 @@ module CorridorPlanControls
 
         result = compute_plan(planner_task, start_point, target_point)
         if result
-            puts "result: #{result.corridors.size}"
             yield(result) if block_given?
             self.plan = result
         else
@@ -84,10 +96,12 @@ module CorridorPlanControls
         task.margin    = expand_factor || 1.1
         task.min_width = min_width || 0.75
         if strong_edge_filter
-            task.strong_edge_path = strong_edge_filter.path
-            task.strong_edge_map  = strong_edge_filter.map
-            task.strong_edge_band  = strong_edge_filter.band
-            task.strong_edge_threshold  = strong_edge_filter.threshold
+            task.enable_strong_edge_filter = true
+            task.strong_edge_filter = strong_edge_filter
+        end
+        if narrow_wide_filter
+            task.enable_narrow_wide_filter = true
+            task.narrow_wide_filter = narrow_wide_filter
         end
 
         task.configure
@@ -204,6 +218,7 @@ module CorridorPlanControls
             plan.annotate_corridor_segments(
                 lstSymbol.currentText, annotateSymbolIdx.value,
                 lstSymbol.currentText)
+            vizkit_corridors.updatePlan(plan)
         end
     end
 

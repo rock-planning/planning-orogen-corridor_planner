@@ -17,12 +17,20 @@ bool Task::configureHook()
     planner  = new corridor_planner::CorridorPlanner();
     planner->init(_terrain_classes.get(), _map.get(), _min_width.get());
 
-    if (!_strong_edge_path.get().empty())
+    if (_enable_strong_edge_filter.get())
     {
-        planner->setStrongEdgeFilter(_strong_edge_path.get(),
-                _strong_edge_map.get(),
-                _strong_edge_band.get(),
-                _strong_edge_threshold.get());
+        StrongEdgeFilterConfig config = _strong_edge_filter;
+        planner->enableStrongEdgeFilter(config.env_path,
+                config.map_id,
+                config.band_name,
+                config.threshold);
+    }
+
+    if (_enable_narrow_wide_filter.get())
+    {
+        NarrowWideFilterConfig config = _narrow_wide_filter;
+        planner->enableNarrowWideFilter(config.narrow_threshold,
+                config.wide_threshold);
     }
 
     return true;

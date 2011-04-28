@@ -1,6 +1,9 @@
 #! /usr/bin/env ruby
 
 require 'orocos'
+Orocos.initialize
+Orocos.load_typekit 'corridor_planner'
+
 $LOAD_PATH.unshift File.expand_path(File.dirname(__FILE__))
 require 'vizkit'
 require 'corridor_plan_controls'
@@ -17,13 +20,20 @@ task_name = nil
 strong_edge_path, strong_edge_map, strong_edge_band, strong_edge_threshold = nil
 problem = nil
 min_width = nil
+narrow_threshold, wide_threshold = nil
 
 opt_parse = OptionParser.new do |opt|
     opt.banner = "run [options] <map_file> <classes_file> <expand_factor> [mls_env]"
     opt.on('-t TASK_NAME', String, 'connect to the given task instead of starting our own') do |name|
         task_name = name
     end
-    opt.on('-f PATH:MAP:BAND:THRESHOLD', String, 'run a strong edge annotation filter on the resulting corridors') do |config|
+    opt.on('--narrow-wide NARROW_THRESHOLD:WIDE_THRESHOLD', String, 'run a narrow/wide annotation filter on the resulting corridors') do |config|
+        config = config.split(':')
+        narrow_threshold = Float(config[0])
+        wide_threshold   = Float(config[1])
+    end
+
+    opt.on('--strong-edge PATH:MAP:BAND:THRESHOLD', String, 'run a strong edge annotation filter on the resulting corridors') do |config|
         config = config.split(':')
         strong_edge_path = config[0]
         strong_edge_map = Integer(config[1])
@@ -53,9 +63,6 @@ require 'envire/gdal'
 BASE_DIR = File.expand_path('..', File.dirname(__FILE__))
 ENV['PKG_CONFIG_PATH'] = "#{File.join(BASE_DIR, 'build')}:#{ENV['PKG_CONFIG_PATH']}"
 
-Orocos.initialize
-Orocos.load_typekit 'corridor_planner'
-
 map_path     = File.expand_path(remaining.shift)
 classes_path = File.expand_path(remaining.shift)
 if !File.exists?(classes_path)
@@ -80,6 +87,9 @@ main.min_width = min_width
 main.expand_factor = expand_factor
 if strong_edge_path
     main.enable_strong_edge_filter(strong_edge_path, strong_edge_map, strong_edge_band, strong_edge_threshold)
+end
+if narrow_threshold
+    main.enable_narrow_wide_filter(narrow_threshold, wide_threshold)
 end
 
 # Set the image view up so that we pick the start point / target point there

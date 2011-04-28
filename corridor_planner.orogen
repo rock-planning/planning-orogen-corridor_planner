@@ -5,6 +5,7 @@ import_types_from "base"
 using_library 'corridor_planner'
 # corridors.hh is installed by the corridor_planner library
 import_types_from "corridor_planner/corridors.hh"
+import_types_from "FilterConfigTypes.hpp"
 
 typekit.export_types '/corridors/Corridor'
 
@@ -24,14 +25,11 @@ task_context 'Task' do
     property('min_width', 'double', 0).
         doc "minimum width at which a corridor can be traversed, in meters"
 
-    property('strong_edge_path', 'string').
-        doc "path to the environment that should be used for strong edge filtering"
-    property('strong_edge_map', 'int').
-        doc "map to be used for strong edge annotations"
-    property('strong_edge_band', 'string').
-        doc "band in the map"
-    property('strong_edge_threshold', 'double').
-        doc "the different in height after which the corridor boundary will be marked as strong_edge"
+    property('enable_strong_edge_filter', 'bool')
+    property('strong_edge_filter', 'corridor_planner/StrongEdgeFilterConfig')
+
+    property('enable_narrow_wide_filter', 'bool')
+    property('narrow_wide_filter', 'corridor_planner/NarrowWideFilterConfig')
 
     runtime_states :dstar, # the task is running the D* pass
         :skeleton, # the task is running the skeleton extraction pass
