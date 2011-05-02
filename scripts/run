@@ -81,7 +81,9 @@ main = Vizkit.default_loader.load(File.join(BASE_DIR, "scripts", "corridor_plann
 main.extend CorridorPlanControls
 main.setupUI
 main.map_path = map_path
-main.mls_env = mls_env
+if mls_env
+    main.mls_env = mls_env
+end
 main.classes_path = classes_path
 main.min_width = min_width
 main.expand_factor = expand_factor
