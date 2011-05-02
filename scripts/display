@@ -21,6 +21,10 @@ if task_name
 else
     logfile = remaining.shift
     mls_env = remaining.shift
+    if !logfile
+        puts opt_parse
+        exit 1
+    end
 end
 
 if !remaining.empty?
