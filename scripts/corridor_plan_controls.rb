@@ -25,9 +25,6 @@ module CorridorPlanControls
         vizkit_corridors.clearCorridors(0)
         if !@all_paths.empty?
             status.setText("#{@all_paths.size} paths in plan")
-            @all_paths.each do  |p|
-                puts p.inspect
-            end
             pathIdx.setRange(-1, @all_paths.size - 1)
             setPath(-1)
         else
