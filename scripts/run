@@ -55,6 +55,7 @@ end
 
 remaining = opt_parse.parse(ARGV)
 if remaining.size != 3 && remaining.size != 4
+    puts opt_parse
     exit 1
 end
 
