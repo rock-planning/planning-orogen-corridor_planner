@@ -110,7 +110,14 @@ main.map_view.connect(SIGNAL('clickImage(int,int)')) do |x, y|
     else
         target_point = main.map_view.viewToMap(x, y)
         puts "target point: #{target_point.inspect} (pixels=#{x} #{y})"
-        main.compute(planner_task, start_point, target_point)
+        main.compute(planner_task, start_point, target_point) do |plan|
+            plan.cleanup_annotations("STRONG_EDGE", 1 => [1, 0.2])
+            plan.cleanup_annotations("NARROW_WIDE", 1 => [1, 0.2])
+            plan.annotate_corridor_segments("STRONG_EDGE", 1, "STRONG_EDGE")
+            plan.cleanup_annotations("STRONG_EDGE", 1 => [1, 0.2])
+            plan.intersect_annotations("STRONG_EDGE", 1, "NARROW_WIDE", 0, "CORRIDOR_SERVOING")
+            plan.cleanup_annotations("CORRIDOR_SERVOING", 1 => [1, 0.2])
+        end
         start_point = target_point = nil
     end
 end
@@ -119,7 +126,14 @@ def common_setup(main, planner_task, problem)
     main.show
     main.view3d.show
     if problem
-        main.compute(planner_task, problem[0], problem[1])
+        main.compute(planner_task, problem[0], problem[1]) do |plan|
+            plan.cleanup_annotations("STRONG_EDGE", 1 => [1, 0.2])
+            plan.cleanup_annotations("NARROW_WIDE", 1 => [1, 0.2])
+            plan.annotate_corridor_segments("STRONG_EDGE", 1, "STRONG_EDGE")
+            plan.cleanup_annotations("STRONG_EDGE", 1 => [1, 0.2])
+            plan.intersect_annotations("STRONG_EDGE", 1, "NARROW_WIDE", 0, "CORRIDOR_SERVOING")
+            plan.cleanup_annotations("CORRIDOR_SERVOING", 1 => [1, 0.2])
+        end
     end
 end
 
