@@ -164,6 +164,12 @@ module CorridorPlanControls
             endIdx.setRange(1, current_path.size)
             startIdx.setValue(0)
             endIdx.setValue(current_path.size)
+
+            if @corridor_segments
+                computeCorridorSegments
+            else
+                endIdx.enabled = true
+            end
             update_path
         end
     end
@@ -210,8 +216,15 @@ module CorridorPlanControls
             else
                 annotateSymbolIdx.enabled = true
                 btnAnnotateCorridor.enabled = true
+                btnSplit.enabled = true
                 vizkit_corridors.setDisplayedAnnotation(value)
             end
+        end
+
+        btnAnnotationOnPlan.connect(SIGNAL('clicked(bool)')) do |checked|
+            puts "btnAnnotationOnPlan: #{checked}"
+            vizkit_corridors.displayAnnotationsOnPlan(checked)
+            update_path
         end
 
         btnAnnotateCorridor.connect(SIGNAL('clicked()')) do
@@ -220,6 +233,25 @@ module CorridorPlanControls
                 lstSymbol.currentText)
             vizkit_corridors.updatePlan(plan)
         end
+        btnSplit.connect(SIGNAL('clicked(bool)')) do |checked|
+            if checked
+                computeCorridorSegments
+                update_path
+            else
+                endIdx.enabled = true
+                @corridor_segments = nil
+                update_path
+            end
+        end
+    end
+
+    def computeCorridorSegments
+        annotation_idx = plan.find_annotation(lstSymbol.currentText)
+        corridor = plan.path_to_corridor(current_path)
+        @corridor_segments = corridor.split_annotation_segments(annotation_idx)
+        endIdx.enabled = false
+        startIdx.setValue(0)
+        startIdx.setMaximum(@corridor_segments.size)
     end
 
     def update_symbols
@@ -243,8 +275,14 @@ module CorridorPlanControls
     def update_path
         if @plan && pathIdx.value != -1
             begin
-                path = current_path[startIdx.value, endIdx.value - startIdx.value]
-                current_corridor = plan.path_to_corridor(path)
+                if @corridor_segments
+                    current_corridor = @corridor_segments[startIdx.value].last
+                else
+                    puts
+                    puts "selected path: #{current_path.inspect}"
+                    path = current_path[startIdx.value, endIdx.value - startIdx.value]
+                    current_corridor = plan.path_to_corridor(path)
+                end
                 vizkit_corridors.clearCorridors(0)
                 vizkit_corridors.displayCorridor(current_corridor)
             rescue Exception => e

@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>294</width>
-    <height>561</height>
+    <width>284</width>
+    <height>621</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -90,14 +90,24 @@
         <item row="0" column="0" colspan="2">
          <widget class="QComboBox" name="lstSymbol"/>
         </item>
-        <item row="1" column="0">
+        <item row="1" column="0" colspan="2">
+         <widget class="QCheckBox" name="btnAnnotationOnPlan">
+          <property name="text">
+           <string>Display on the plan as well</string>
+          </property>
+          <property name="checked">
+           <bool>false</bool>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="0">
          <widget class="QSpinBox" name="annotateSymbolIdx">
           <property name="enabled">
            <bool>false</bool>
           </property>
          </widget>
         </item>
-        <item row="1" column="1">
+        <item row="2" column="1">
          <widget class="QPushButton" name="btnAnnotateCorridor">
           <property name="enabled">
            <bool>false</bool>
@@ -109,11 +119,25 @@ Annotations</string>
           </property>
          </widget>
         </item>
+        <item row="3" column="0" colspan="2">
+         <widget class="QPushButton" name="btnSplit">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
+          <property name="text">
+           <string>Split on Annotation
+Boundaries</string>
+          </property>
+          <property name="checkable">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
        </layout>
       </widget>
      </item>
      <item>
-      <widget class="ImageView" name="map_view">
+      <widget class="ImageView" name="map_view" native="true">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
          <horstretch>0</horstretch>
@@ -144,14 +168,14 @@ Annotations</string>
  </widget>
  <customwidgets>
   <customwidget>
-   <class>ImageView</class>
-   <extends>QWidget</extends>
-   <header>image_view_widget/ImageView.h</header>
-  </customwidget>
-  <customwidget>
    <class>vizkit::QVizkitMainWindow</class>
    <extends>QMainWindow</extends>
    <header>QVizkitMainWindow.hpp</header>
+  </customwidget>
+  <customwidget>
+   <class>ImageView</class>
+   <extends>QWidget</extends>
+   <header>image_view_widget/ImageView.h</header>
   </customwidget>
  </customwidgets>
  <resources/>
