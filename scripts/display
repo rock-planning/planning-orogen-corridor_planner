@@ -1,9 +1,13 @@
 #! /usr/bin/env ruby
 
 require 'orocos'
+Orocos.initialize
+Orocos.load_typekit 'corridor_planner'
+
 $LOAD_PATH.unshift File.expand_path(File.dirname(__FILE__))
 require 'vizkit'
 require 'corridor_plan_controls'
+require 'envire/raster_map_view'
 require 'optparse'
 include Orocos
 
@@ -32,39 +36,25 @@ if !remaining.empty?
     exit 1
 end
 
-Orocos.load
-Orocos.load_typekit 'corridor_planner'
 require 'pocolog'
+BASE_DIR = File.expand_path('..', File.dirname(__FILE__))
 
 # Get the UI
-BASE_DIR = File.expand_path('..', File.dirname(__FILE__))
 main = Vizkit.default_loader.load(File.join(BASE_DIR, "scripts", "corridor_planner.ui"))
-
-# Setup the map viewer. We will use it to pick the start and end point
+main.extend CorridorPlanControls
+main.setupUI
+if mls_env
+    main.mls_env = mls_env
+end
 main.map_view.hide
 
-# Setup the vizkit widget. In this one, we display the resulting plan
-vizkit_widget = main.view3d
-corridor_view = vizkit_widget.createPlugin('corridor_planner')
-corridor_view.setAlpha(0.5)
-corridor_view.setZOffset(0.05)
-if mls_env
-    corridor_view.setMLS(mls_env)
-    envire_view = vizkit_widget.createPlugin('envire')
-    envire_view.load(mls_env)
-end
-
-# Setup the control UI for displaying the plan
-main.extend CorridorPlanControls
-main.setupControls
-main.corridor_view = corridor_view
-
 def update(main, plan)
-    puts "start point: #{plan.corridors[plan.start_corridor].median_curve.start_point.to_a.inspect}"
-    puts "target point: #{plan.corridors[plan.end_corridor].median_curve.start_point.to_a.inspect}"
-    #strong_filter_cleanup =
-    #    [nil, [1, 0.5], nil]
-    #plan.cleanup_annotations("STRONG_EDGE", strong_filter_cleanup)
+    plan.cleanup_annotations("STRONG_EDGE", 1 => [1, 0.2])
+    plan.cleanup_annotations("NARROW_WIDE", 1 => [1, 0.2])
+    plan.annotate_corridor_segments("STRONG_EDGE", 1, "STRONG_EDGE")
+    plan.cleanup_annotations("STRONG_EDGE", 1 => [1, 0.2])
+    plan.intersect_annotations("STRONG_EDGE", 1, "NARROW_WIDE", 0, "CORRIDOR_SERVOING")
+    plan.cleanup_annotations("CORRIDOR_SERVOING", 0 => [2, 0.2])
     main.plan = plan
 end
 
