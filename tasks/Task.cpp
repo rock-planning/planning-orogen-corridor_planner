@@ -13,6 +13,11 @@ Task::Task(std::string const& name)
 
 bool Task::configureHook()
 {
+    return true;
+}
+
+bool Task::startHook()
+{
     delete planner;
     planner  = new corridor_planner::CorridorPlanner();
     planner->init(_terrain_classes.get(), _map.get(), _min_width.get());
@@ -33,11 +38,6 @@ bool Task::configureHook()
                 config.wide_threshold);
     }
 
-    return true;
-}
-
-bool Task::startHook()
-{
     Eigen::Vector3d p0 = _start_point.get();
     Eigen::Vector3d p1 = _target_point.get();
     planner->setMarginFactor(_margin.get());
