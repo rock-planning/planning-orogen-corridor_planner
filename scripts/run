@@ -11,11 +11,6 @@ require 'envire/raster_map_view'
 require 'optparse'
 include Orocos
 
-def usage
-    STDERR.puts "scripts/run [-t task_name] <classes_file> <map_file> <expand_factor> [mls_env]"
-    exit 1
-end
-
 task_name = nil
 strong_edge_path, strong_edge_map, strong_edge_band, strong_edge_threshold = nil
 problem = nil
