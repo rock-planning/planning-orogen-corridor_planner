@@ -83,6 +83,14 @@ module CorridorPlanControls
         end
     end
 
+    def export_current_corridor
+        if @current_corridor
+            @corridor_log ||= Pocolog::Logfiles.create('exported_corridors')
+            @corridor_stream ||= @corridor_log.stream('ui.exported_corridors', Types::Corridors::Corridor, true)
+            @corridor_stream.write(Time.now, Time.now, @current_corridor)
+        end
+    end
+
     def compute_plan(task, start_point, target_point)
         task.terrain_classes = classes_path
         task.map = map_path
@@ -205,6 +213,10 @@ module CorridorPlanControls
             startIdx.setMaximum(idx - 1)
             update_path
         end
+        btnExport.connect(SIGNAL('clicked()')) do
+            export_current_corridor
+        end
+
         lstSymbol.connect(SIGNAL('activated(QString const&)')) do |value|
             if value == "None"
                 annotateSymbolIdx.enabled = false
@@ -273,22 +285,25 @@ module CorridorPlanControls
         if @plan && pathIdx.value != -1
             begin
                 if @corridor_segments
-                    current_corridor = @corridor_segments[startIdx.value].last
+                    @current_corridor = @corridor_segments[startIdx.value].last
                 else
-                    puts
-                    puts "selected path: #{current_path.inspect}"
                     path = current_path[startIdx.value, endIdx.value - startIdx.value]
-                    current_corridor = plan.path_to_corridor(path)
+                    @current_corridor = plan.path_to_corridor(path)
                 end
                 vizkit_corridors.clearCorridors(0)
-                vizkit_corridors.displayCorridor(current_corridor)
+                vizkit_corridors.displayCorridor(@current_corridor)
+                btnExport.enabled = true
             rescue Exception => e
+                btnExport.enabled = false
                 STDERR.puts "ERROR: cannot display path #{path.inspect}"
                 STDERR.puts "ERROR:   #{e.message}"
                 e.backtrace.each do |line|
                     STDERR.puts "ERROR:     #{line}"
                 end
             end
+        else
+            @current_corridor = nil
+            btnExport.enabled = false
         end
     end
 end

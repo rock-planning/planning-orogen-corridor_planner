@@ -78,6 +78,19 @@
         <item row="1" column="3">
          <widget class="QSpinBox" name="endIdx"/>
         </item>
+        <item row="2" column="0" colspan="4">
+         <widget class="QPushButton" name="btnExport">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
+          <property name="text">
+           <string>Export</string>
+          </property>
+          <property name="checkable">
+           <bool>false</bool>
+          </property>
+         </widget>
+        </item>
        </layout>
       </widget>
      </item>
