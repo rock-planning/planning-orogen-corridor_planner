@@ -151,7 +151,7 @@ if task_name
     common_setup(main, planner_task, conf_spec)
     Vizkit.exec
 else
-    Orocos::Process.spawn 'test_corridor_planner', :output => 'cplanner-log.txt' do |p|
+    Orocos.run 'corridor_planner::Task' => 'planner', :output => 'cplanner-log.txt' do |p|
         planner_task = p.task('planner')
         Orocos.log_all_ports
         Orocos.log_all_configuration
