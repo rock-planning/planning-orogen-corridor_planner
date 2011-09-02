@@ -67,9 +67,9 @@ module CorridorPlanControls
         median_point = start_point.to_a.zip(target_point.to_a).map { |a, b| (a + b) / 2 }
         up_vector    = start_point.to_a.zip(target_point.to_a).map { |a, b| (b - a) }
         length = Math.sqrt(up_vector.inject(0) { |length, v| length + v * v })
-        view3d.centralWidget.setCameraLookAt(median_point[0], median_point[1], 0)
-        view3d.centralWidget.setCameraEye(median_point[0], median_point[1], length)
-        view3d.centralWidget.setCameraUp(up_vector[0], up_vector[1], 0)
+        view3d.setCameraLookAt(median_point[0], median_point[1], 0)
+        view3d.setCameraEye(median_point[0], median_point[1], length)
+        view3d.setCameraUp(up_vector[0], up_vector[1], 0)
 
         # Update the status field
         status.setText("computing")

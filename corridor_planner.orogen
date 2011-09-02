@@ -40,9 +40,3 @@ task_context 'Task' do
     output_port 'plan', 'corridors/Plan'
 end
 
-deployment 'test_corridor_planner' do
-    do_not_install
-    task('planner', 'Task')
-    add_default_logger
-end
-

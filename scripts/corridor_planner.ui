@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>284</width>
-    <height>621</height>
+    <width>575</width>
+    <height>626</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -137,7 +137,7 @@ Boundaries</string>
       </widget>
      </item>
      <item>
-      <widget class="ImageView" name="map_view" native="true">
+      <widget class="ImageView" name="map_view">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
          <horstretch>0</horstretch>
@@ -155,7 +155,7 @@ Boundaries</string>
     </layout>
    </item>
    <item>
-    <widget class="vizkit::QVizkitMainWindow" name="view3d">
+    <widget class="vizkit::Vizkit3DWidget" name="view3d">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
        <horstretch>0</horstretch>
@@ -168,14 +168,20 @@ Boundaries</string>
  </widget>
  <customwidgets>
   <customwidget>
-   <class>vizkit::QVizkitMainWindow</class>
-   <extends>QMainWindow</extends>
-   <header>QVizkitMainWindow.hpp</header>
+   <class>ImageView</class>
+   <extends>MultiWidget</extends>
+   <header>image_view_widget/ImageView.h</header>
   </customwidget>
   <customwidget>
-   <class>ImageView</class>
+   <class>MultiWidget</class>
    <extends>QWidget</extends>
-   <header>image_view_widget/ImageView.h</header>
+   <header>multi_view/MultiWidget.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>vizkit::Vizkit3DWidget</class>
+   <extends>QWidget</extends>
+   <header>vizkit/Vizkit3DWidget.hpp</header>
   </customwidget>
  </customwidgets>
  <resources/>
