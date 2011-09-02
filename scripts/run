@@ -16,9 +16,10 @@ strong_edge_path, strong_edge_map, strong_edge_band, strong_edge_threshold = nil
 problem = nil
 min_width = nil
 narrow_threshold, wide_threshold = nil
+mls_env = nil
 
 opt_parse = OptionParser.new do |opt|
-    opt.banner = "run [options] <map_file> <classes_file> <expand_factor> [mls_env]"
+    opt.banner = "run [options] <map_file> <classes_file> <expand_factor>"
     opt.on('-t TASK_NAME', String, 'connect to the given task instead of starting our own') do |name|
         task_name = name
     end
@@ -46,6 +47,9 @@ opt_parse = OptionParser.new do |opt|
             Eigen::Vector3.new(problem[0], problem[1], 0),
             Eigen::Vector3.new(problem[2], problem[3], 0)]
     end
+    opt.on('--env=PATH', 'path to the environment used for display') do |env|
+        mls_env = env
+    end
 end
 
 remaining = opt_parse.parse(ARGV)
@@ -70,7 +74,6 @@ if !File.exists?(map_path)
     exit 1
 end
 expand_factor        = Float(remaining.shift)
-mls_env = remaining.shift
 
 # Get the UI
 main = Vizkit.default_loader.load(File.join(BASE_DIR, "scripts", "corridor_planner.ui"))
