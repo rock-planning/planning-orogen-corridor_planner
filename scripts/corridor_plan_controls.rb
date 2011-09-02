@@ -61,8 +61,6 @@ module CorridorPlanControls
     end
 
     def compute(planner_task, start_point, target_point)
-        puts start_point.to_a.inspect
-        puts target_point.to_a.inspect
         # First, update the viewpoint of the 3D view
         median_point = start_point.to_a.zip(target_point.to_a).map { |a, b| (a + b) / 2 }
         up_vector    = start_point.to_a.zip(target_point.to_a).map { |a, b| (b - a) }
@@ -128,7 +126,6 @@ module CorridorPlanControls
         while true
             while task.state_changed?
                 last_state = task.state(false)
-                STDERR.puts last_state
                 status.setText(last_state.to_s)
                 if !is_running
                     if last_state == :RUNNING
@@ -138,12 +135,10 @@ module CorridorPlanControls
             end
             if is_running
                 if task.error?
-                    STDERR.puts "Failed ..."
                     task.reset_exception
                     break
                 elsif !task.running?
                     plan = result_reader.read
-                    STDERR.puts "found #{plan.corridors.size} corridors (graph written to result.dot)"
                     File.open('result.dot', 'w') do |io|
                         io.write plan.to_dot
                     end
@@ -239,7 +234,6 @@ module CorridorPlanControls
         end
 
         btnAnnotationOnPlan.connect(SIGNAL('clicked(bool)')) do |checked|
-            puts "btnAnnotationOnPlan: #{checked}"
             vizkit_corridors.displayAnnotationsOnPlan(checked)
             update_path
         end

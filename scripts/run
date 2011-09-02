@@ -106,13 +106,11 @@ main.status.setText("select start point")
 main.map_view.connect(SIGNAL('clickImage(int,int)')) do |x, y|
     if !start_point
         start_point = main.map_view.viewToMap(x, y)
-        puts "start point: #{start_point.inspect} (pixels=#{x} #{y})"
         main.status.setText("select target point")
         main.view3d.centralWidget.setCameraLookAt(start_point[0], start_point[1], 0)
         main.view3d.centralWidget.setCameraEye(start_point[0], start_point[1], 10)
     else
         target_point = main.map_view.viewToMap(x, y)
-        puts "target point: #{target_point.inspect} (pixels=#{x} #{y})"
         main.compute(planner_task, start_point, target_point) do |plan|
             plan.cleanup_annotations("STRONG_EDGE", 1 => [1, 0.2])
             plan.cleanup_annotations("NARROW_WIDE", 1 => [1, 0.2])
