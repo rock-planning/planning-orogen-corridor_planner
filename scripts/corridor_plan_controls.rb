@@ -100,6 +100,9 @@ module CorridorPlanControls
 
         task.margin    = expand_factor || 1.1
         task.min_width = min_width || 0.75
+        if mls_env
+            task.strong_edge_filter { |p| p.env_path = mls_env }
+        end
         if strong_edge_filter
             task.enable_strong_edge_filter = true
             task.strong_edge_filter = strong_edge_filter

@@ -17,6 +17,7 @@ problem = nil
 min_width = nil
 narrow_threshold, wide_threshold = nil
 mls_env = nil
+conf_spec = nil
 
 opt_parse = OptionParser.new do |opt|
     opt.banner = "run [options] <map_file> <classes_file> <expand_factor>"
@@ -49,6 +50,9 @@ opt_parse = OptionParser.new do |opt|
     end
     opt.on('--env=PATH', 'path to the environment used for display') do |env|
         mls_env = env
+    end
+    opt.on('--conf=CONFSPEC', 'configuration to use as PATH[:conf_names]') do |conf|
+        conf_spec = conf
     end
 end
 
@@ -121,7 +125,13 @@ main.map_view.connect(SIGNAL('clickImage(int,int)')) do |x, y|
     end
 end
 
-def common_setup(main, planner_task, problem)
+def common_setup(main, planner_task, task_conf, problem)
+    if task_conf
+        conf_path, conf_names = task_conf.split(':')
+        conf_names = (conf_names || "default").split(',')
+        Orocos.apply_conf(planner_task, conf_path, conf_names)
+    end
+
     main.show
     main.view3d.show
     if problem
@@ -138,14 +148,14 @@ end
 
 if task_name
     planner_task = Orocos::TaskContext.get task_name
-    common_setup(main, planner_task)
+    common_setup(main, planner_task, conf_spec)
     Vizkit.exec
 else
     Orocos::Process.spawn 'test_corridor_planner', :output => 'cplanner-log.txt' do |p|
         planner_task = p.task('planner')
         Orocos.log_all_ports
         Orocos.log_all_configuration
-        common_setup(main, planner_task, problem)
+        common_setup(main, planner_task, conf_spec, problem)
         Vizkit.exec
     end
 end
