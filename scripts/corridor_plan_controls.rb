@@ -109,8 +109,13 @@ module CorridorPlanControls
             task.narrow_wide_filter = narrow_wide_filter
         end
 
-        task.configure
-        task.start
+        begin
+            task.configure
+            task.start
+        rescue Orocos::StateTransitionFailed
+            status.setText("failed to configure or start")
+            return
+        end
 
         # To get the result when the task finished
         result_reader = task.plan.reader
