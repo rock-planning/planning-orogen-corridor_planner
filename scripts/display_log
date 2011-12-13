@@ -1,41 +1,78 @@
 #! /usr/bin/env ruby
 
-require 'orocos/log'
-require 'widget_grid'
-require 'base/typelib_plugin'
+require 'orocos'
+Orocos.initialize
+Orocos.load_typekit 'corridor_planner'
 
-if ARGV.size < 1 || ARGV.size > 2
-    STDERR.puts "display_log logfile [stream_name]"
+$LOAD_PATH.unshift File.expand_path(File.dirname(__FILE__))
+require 'vizkit'
+require 'corridor_plan_controls'
+require 'envire/raster_map_view'
+require 'optparse'
+include Orocos
+
+task_name = nil
+opt_parse = OptionParser.new do |opt|
+    opt.banner = "display <log_file|-t task> [mls_env]"
+    opt.on('-t TASK_NAME', String, 'connect to the given task instead of starting our own') do |name|
+        task_name = name
+    end
+end
+
+remaining = opt_parse.parse(ARGV)
+if task_name
+    mls_env = remaining.shift
+else
+    logfile = remaining.shift
+    mls_env = remaining.shift
+    if !logfile
+        puts opt_parse
+        exit 1
+    end
+end
+
+if !remaining.empty?
+    puts opt_parse
     exit 1
 end
 
-logs = Orocos::Log::Replay.open ARGV.shift
-port = logs.find_port('/corridors/Plan_m', ARGV.shift)
+require 'pocolog'
+BASE_DIR = File.expand_path('..', File.dirname(__FILE__))
 
-_, _, sample = port.stream.first
-puts "sample has #{sample.corridors.length} corridors"
-port.stream.rewind
+# Get the UI
+main = Vizkit.default_loader.load(File.join(BASE_DIR, "scripts", "corridor_planner.ui"))
+main.extend CorridorPlanControls
+main.setupUI
+if mls_env
+    main.mls_env = mls_env
+end
+main.map_view.hide
 
-if !port
-    raise "no log stream of type /corridors/Plan_m found"
+def update(main, plan)
+    plan.cleanup_annotations("STRONG_EDGE", 1 => [1, 0.2])
+    plan.cleanup_annotations("NARROW_WIDE", 1 => [1, 0.2])
+    plan.annotate_corridor_segments("STRONG_EDGE", 1, "STRONG_EDGE")
+    plan.cleanup_annotations("STRONG_EDGE", 1 => [1, 0.2])
+    plan.intersect_annotations("STRONG_EDGE", 1, "NARROW_WIDE", 0, "CORRIDOR_SERVOING")
+    plan.cleanup_annotations("CORRIDOR_SERVOING", 0 => [2, 0.2])
+    main.plan = plan
 end
 
-widget_grid = WidgetGrid.new
-base_dir = File.expand_path(File.dirname(__FILE__))
-widget = widget_grid.display(port, :env => File.join(base_dir, 'track-simple'), :pointcloud => [1, 100, 100, 0.25, 0.25], :position => :center)
-widget_grid.control(logs)
+main.show
+main.view3d.show
 
-paths = sample.all_paths
-
-tic = Time.now
-widget_grid.run do
-    if (Time.now - tic) > 2
-        p = rand(paths.size)
-        selected = paths[p]
-        puts "selected path #{selected.inspect}"
-        corridor = sample.path_to_corridor(selected)
-        widget.updateSelectedCorridor(corridor)
-        tic = Time.now
+if task_name
+    planner_task = Orocos::TaskContext.get task_name
+    planner_task.plan.connect_to do |sample|
+        update(main, sample)
     end
+else
+    require 'pocolog'
+    file = Pocolog::Logfiles.open(logfile)
+    stream = file.stream_from_type(Types::Corridors::Plan)
+    data = stream.first.last
+
+    update(main, data)
 end
+Vizkit.exec
 
