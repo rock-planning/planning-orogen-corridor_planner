@@ -4,7 +4,7 @@
 namespace corridor_planner {
     struct StrongEdgeFilterConfig {
         std::string env_path;
-        int map_id;
+        std::string map_id;
         std::string band_name;
         double threshold;
     };
