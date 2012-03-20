@@ -6,6 +6,7 @@ using_library 'corridor_planner'
 # corridors.hh is installed by the corridor_planner library
 import_types_from "corridor_planner/corridors.hh"
 import_types_from "FilterConfigTypes.hpp"
+import_types_from "envire/core/EventTypes.hpp"
 
 typekit.export_types '/corridors/Corridor'
 
@@ -40,3 +41,12 @@ task_context 'Task' do
     output_port 'plan', 'corridors/Plan'
 end
 
+task_context 'Traversability' do
+    needs_configuration
+
+    input_port('map', '/envire/EnvireBinaryEvent').
+	doc("Current map")
+
+    output_port('traversability_map', '/envire/EnvireBinaryEvent').
+	doc('Traversability map')
+end
