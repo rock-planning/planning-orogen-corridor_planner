@@ -20,7 +20,7 @@ bool Task::startHook()
 {
     delete planner;
     planner  = new corridor_planner::CorridorPlanner();
-    planner->init(_terrain_classes.get(), _map.get(), _min_width.get());
+    planner->init(_terrain_classes.get(), _map.get(), _min_width.get(), _cost_cutoff.get());
 
     if (_enable_strong_edge_filter.get())
     {
@@ -55,8 +55,14 @@ void Task::updateHook()
 
     if (state() == DSTAR)
     {
-        planner->computeDStar();
-        state(SKELETON);
+        try {
+            planner->computeDStar();
+            state(SKELETON);
+        }
+        catch(corridor_planner::CostCutoffReached)
+        {
+            exception(NO_SOLUTION);
+        }
     }
     else if (state() == SKELETON)
     {

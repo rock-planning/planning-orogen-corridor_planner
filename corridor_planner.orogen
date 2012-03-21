@@ -21,6 +21,8 @@ task_context 'Task' do
         doc "starting point in world coordinates"
     property('target_point', 'base/Vector3d').
         doc "target point in world coordinates"
+    property('cost_cutoff', 'double', 1e6).
+        doc "cost above which the search is aborted"
     property('margin', 'double', 1.1).
         doc "allowed cost margin, as a rate w.r.t. the optimal cost (i.e. 1.1 means 10% above optimal)"
     property('min_width', 'double', 0).
@@ -37,6 +39,8 @@ task_context 'Task' do
         :plan, # the task is running the plan generation pass
         :plan_simplification, # the task is running the plan simplification pass
         :annotations # the task is running the annotation pass
+
+    exception_states :no_solution
 
     output_port 'plan', 'corridors/Plan'
 end
