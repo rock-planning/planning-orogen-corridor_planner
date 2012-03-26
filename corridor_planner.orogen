@@ -6,7 +6,10 @@ using_library 'corridor_planner'
 # corridors.hh is installed by the corridor_planner library
 import_types_from "corridor_planner/corridors.hh"
 import_types_from "FilterConfigTypes.hpp"
-import_types_from "envire/core/EventTypes.hpp"
+import_types_from "TerrainInfo.hpp"
+import_types_from "envire/operators/SimpleTraversability.hpp"
+import_types_from "envire"
+using_library "envire"
 
 typekit.export_types '/corridors/Corridor'
 
@@ -48,9 +51,33 @@ end
 task_context 'Traversability' do
     needs_configuration
 
-    input_port('map', '/envire/EnvireBinaryEvent').
+    property("env_name", "std/string", "/traversability/").
+        doc "the envire prefix that should be used to create new maps"
+
+    property("x_size", "double").
+        doc "map size in the X direction in meters"
+    property("y_size", "double").
+        doc "map size in the Y direction in meters"
+    property("cell_size", "double").
+        doc "size of a cell in meters"
+
+    property("env_save_path", "std/string").
+        doc "if set to a non-empty string, save each generated environment under env_save_path/<seq number>/"
+
+    property("mls_id", "std/string", "/slam/mls").
+        doc "the map ID of the input MLS map. The terrain type information is expected to be encoded as RGB value on the MLS"
+    property("terrain_info", "/corridor_planner/TerrainInfo").
+        doc "structure describing the known terrain types"
+
+    property("traversability_conf", "/envire/SimpleTraversabilityConfig").
+        doc "configuration parameters for the traversability transformation"
+
+    input_port('mls_map', '/envire/EnvireBinaryEvent').
 	doc("Current map")
 
     output_port('traversability_map', '/envire/EnvireBinaryEvent').
 	doc('Traversability map')
+
+    port_driven
 end
+

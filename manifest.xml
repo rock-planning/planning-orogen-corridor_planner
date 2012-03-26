@@ -12,6 +12,7 @@
   <!-- Strong dependencies -->
   <depend package="base/orogen/types"/>
   <depend package="planning/corridor_planner"/>
+  <depend package="slam/orogen/envire"/>
 
   <!-- Needed for scripts in scripts/ -->
   <depend package="gui/vizkit" optional="1" />

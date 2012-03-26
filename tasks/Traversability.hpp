@@ -26,7 +26,8 @@ namespace corridor_planner {
 	friend class TraversabilityBase;
     protected:
 
-
+        envire::Environment* mEnv;
+        int seq_number;
 
     public:
         /** TaskContext constructor for Traversability
@@ -60,14 +61,14 @@ namespace corridor_planner {
          end
          \endverbatim
          */
-        // bool configureHook();
+        bool configureHook();
 
         /** This hook is called by Orocos when the state machine transitions
          * from Stopped to Running. If it returns false, then the component will
          * stay in Stopped. Otherwise, it goes into Running and updateHook()
          * will be called.
          */
-        // bool startHook();
+        bool startHook();
 
         /** This hook is called by Orocos when the component is in the Running
          * state, at each activity step. Here, the activity gives the "ticks"
@@ -83,7 +84,7 @@ namespace corridor_planner {
          * component is stopped and recover() needs to be called before starting
          * it again. Finally, FatalError cannot be recovered.
          */
-        // void updateHook();
+        void updateHook();
 
         /** This hook is called by Orocos when the component is in the
          * RunTimeError state, at each activity step. See the discussion in
@@ -96,7 +97,7 @@ namespace corridor_planner {
         /** This hook is called by Orocos when the state machine transitions
          * from Running to Stopped after stop() has been called.
          */
-        // void stopHook();
+        void stopHook();
 
         /** This hook is called by Orocos when the state machine transitions
          * from Stopped to PreOperational, requiring the call to configureHook()
