@@ -12,6 +12,7 @@ namespace corridor_planner {
 
     protected:
         corridor_planner::CorridorPlanner* planner;
+        envire::Environment* mEnv;
         void exportResults();
 
     public:
@@ -63,7 +64,7 @@ namespace corridor_planner {
          *
          * Call recovered() to go back in the Runtime state.
          */
-        // void errorHook();
+        void errorHook();
 
         /** This hook is called by Orocos when the state machine transitions
          * from Running to Stopped after stop() has been called.
@@ -74,7 +75,7 @@ namespace corridor_planner {
          * from Stopped to PreOperational, requiring the call to configureHook()
          * before calling start() again.
          */
-        // void cleanupHook();
+        void cleanupHook();
     };
 }
 

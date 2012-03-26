@@ -16,10 +16,15 @@ typekit.export_types '/corridors/Corridor'
 task_context 'Task' do
     needs_configuration
 
+    property('map_path', 'string').
+        doc "when using an on-disk envire environment, this is the path to the environment. Otherwise, leave empty and send the map through the map input port."
+    property("map_id", "std/string", "/corridor_planner/traversability").
+        doc "the map ID of the traversability map that should be used for planning"
+    property("map_band", "std/string", "").
+        doc "the band name in the traversability map that should be used as the underlying data"
+
     property('terrain_classes', 'string').
         doc "path to the terrain class definition file"
-    property('map', 'string').
-        doc "path to the traversability map"
     property('start_point',  'base/Vector3d').
         doc "starting point in world coordinates"
     property('target_point', 'base/Vector3d').
@@ -37,15 +42,22 @@ task_context 'Task' do
     property('enable_narrow_wide_filter', 'bool')
     property('narrow_wide_filter', 'corridor_planner/NarrowWideFilterConfig')
 
+    input_port('map', '/envire/EnvireBinaryEvent').
+	doc("Current map")
+
     runtime_states :dstar, # the task is running the D* pass
         :skeleton, # the task is running the skeleton extraction pass
         :plan, # the task is running the plan generation pass
         :plan_simplification, # the task is running the plan simplification pass
         :annotations # the task is running the annotation pass
 
+    error_states :wait_for_map
+
     exception_states :no_solution
 
     output_port 'plan', 'corridors/Plan'
+
+    port_driven
 end
 
 task_context 'Traversability' do

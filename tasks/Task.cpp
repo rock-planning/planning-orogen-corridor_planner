@@ -13,6 +13,11 @@ Task::Task(std::string const& name)
 
 bool Task::configureHook()
 {
+    if (_map_path.get().empty())
+        mEnv = envire::Environment::unserialize(_map_path.get());
+    else
+        mEnv = new envire::Environment;
+
     return true;
 }
 
@@ -20,7 +25,6 @@ bool Task::startHook()
 {
     delete planner;
     planner  = new corridor_planner::CorridorPlanner();
-    planner->init(_terrain_classes.get(), _map.get(), _min_width.get(), _cost_cutoff.get());
 
     if (_enable_strong_edge_filter.get())
     {
@@ -45,7 +49,25 @@ bool Task::startHook()
             Eigen::Vector2d(p0.x(), p0.y()), 
             Eigen::Vector2d(p1.x(), p1.y()));
 
+    error(WAIT_FOR_MAP);
     return true;
+}
+
+void Task::errorHook()
+{
+    envire::BinarySerialization serialization;
+    envire::EnvireBinaryEvent binary_event;
+    while (_map.read(binary_event) == RTT::NewData) 
+        serialization.applyEvent(mEnv, binary_event);
+
+    envire::Grid<uint8_t> const* grid =
+        mEnv->getItem< envire::Grid<uint8_t> >(_map_id.get()).get();
+    if ( grid )
+    {
+        planner->init(_terrain_classes.get(), *grid,
+                _map_band.get(), _min_width.get(), _cost_cutoff.get());
+        recover();
+    }
 }
 
 void Task::updateHook()
@@ -100,6 +122,7 @@ void Task::updateHook()
 //     map = 0;
 // }
 
-// void Task::cleanupHook()
-// {
-// }
+void Task::cleanupHook()
+{
+    delete mEnv;
+}
