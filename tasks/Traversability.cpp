@@ -55,7 +55,6 @@ bool Traversability::startHook()
 void Traversability::updateHook()
 {
     TraversabilityBase::updateHook();
-    std::cout << "update" << std::endl;
 
     // Read map data. Don't do anything until we get a new map
     std::vector<envire::EnvireBinaryEvent> binary_events;
@@ -64,12 +63,9 @@ void Traversability::updateHook()
 
     envire::MLSGrid* mls = mEnv->getItem< envire::MLSGrid >(_mls_id.get()).get();
     if (! mls)
-    {
-        std::cout << "no MLS" << std::endl;
         return;
 
     envire::FrameNode* frame_node = mls->getFrameNode();
-    }
 
     size_t xSize = mls->getCellSizeX(), ySize = mls->getCellSizeY();
 
