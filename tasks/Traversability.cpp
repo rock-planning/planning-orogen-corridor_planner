@@ -67,6 +67,8 @@ void Traversability::updateHook()
     {
         std::cout << "no MLS" << std::endl;
         return;
+
+    envire::FrameNode* frame_node = mls->getFrameNode();
     }
 
     size_t xSize = mls->getCellSizeX(), ySize = mls->getCellSizeY();
@@ -75,7 +77,7 @@ void Traversability::updateHook()
     envire::Grid<double>* mls_geometry =
         new envire::Grid<double>(xSize, ySize, mls->getScaleX(), mls->getScaleY(),
                 0, 0, "mls_geometry");
-    mEnv->attachItem(mls_geometry);
+    mEnv->attachItem(mls_geometry, frame_node);
     envire::MLSSlope* op_mls_slope = new envire::MLSSlope;
     mEnv->attachItem(op_mls_slope);
     op_mls_slope->setInput(mls);
@@ -85,7 +87,7 @@ void Traversability::updateHook()
     envire::Grid<uint8_t>* traversability =
         new envire::Grid<uint8_t>(xSize, ySize, mls->getScaleX(), mls->getScaleY(),
                 0, 0, "map");
-    mEnv->attachItem(traversability);
+    mEnv->attachItem(traversability, frame_node);
     envire::SimpleTraversability* op_trav = new envire::SimpleTraversability(_traversability_conf);
     mEnv->attachItem(op_trav);
     op_trav->setSlope(mls_geometry, "mean_slope");
@@ -134,10 +136,13 @@ void Traversability::updateHook()
     // on the port
     {
         envire::EnvironmentItem::Ptr map = mEnv->detachItem(traversability);
+        envire::EnvironmentItem::Ptr node = mEnv->detachItem(frame_node);
         delete mEnv;
         mEnv = new envire::Environment;
         mEnv->setEnvironmentPrefix(_env_name.get());
-        mEnv->attachItem(map.get());
+        // These two have been kept alive by storing the return value of
+        // detachItem
+        mEnv->attachItem(traversability, frame_node);
     }
 
     // Do the export
