@@ -58,14 +58,9 @@ void Traversability::updateHook()
     std::cout << "update" << std::endl;
 
     // Read map data. Don't do anything until we get a new map
-    envire::BinarySerialization serialization;
-    envire::EnvireBinaryEvent binary_event;
-    while (_mls_map.read(binary_event) == RTT::NewData) 
-    {
-        std::cout << "got binary event" << std::endl;
-        serialization.applyEvent(mEnv, binary_event);
-    }
-    std::cout << "MLS id: " << _mls_id.get() << std::endl;
+    std::vector<envire::EnvireBinaryEvent> binary_events;
+    while (_mls_map.read(binary_events) == RTT::NewData) 
+        mEnv->applyEvents(binary_events);
 
     envire::MLSGrid* mls = mEnv->getItem< envire::MLSGrid >(_mls_id.get()).get();
     if (! mls)
@@ -147,6 +142,7 @@ void Traversability::updateHook()
 
     // Do the export
     envire::OrocosEmitter emitter(mEnv, _traversability_map);
+    emitter.flush();
 
     // Finally, reinitialise the environment for the next update
     delete mEnv;

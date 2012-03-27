@@ -42,7 +42,7 @@ task_context 'Task' do
     property('enable_narrow_wide_filter', 'bool')
     property('narrow_wide_filter', 'corridor_planner/NarrowWideFilterConfig')
 
-    input_port('map', '/envire/EnvireBinaryEvent').
+    input_port('map', 'std/vector</envire/EnvireBinaryEvent>').
 	doc("Current map")
 
     runtime_states :dstar, # the task is running the D* pass
@@ -84,10 +84,10 @@ task_context 'Traversability' do
     property("traversability_conf", "/envire/SimpleTraversabilityConfig").
         doc "configuration parameters for the traversability transformation"
 
-    input_port('mls_map', '/envire/EnvireBinaryEvent').
+    input_port('mls_map', 'std/vector</envire/EnvireBinaryEvent>').
 	doc("Current map")
 
-    output_port('traversability_map', '/envire/EnvireBinaryEvent').
+    output_port('traversability_map', 'std/vector</envire/EnvireBinaryEvent>').
 	doc('Traversability map')
 
     port_driven

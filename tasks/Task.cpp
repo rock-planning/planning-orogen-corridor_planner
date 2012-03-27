@@ -55,10 +55,9 @@ bool Task::startHook()
 
 void Task::errorHook()
 {
-    envire::BinarySerialization serialization;
-    envire::EnvireBinaryEvent binary_event;
+    std::vector<envire::EnvireBinaryEvent> binary_event;
     while (_map.read(binary_event) == RTT::NewData) 
-        serialization.applyEvent(mEnv, binary_event);
+        mEnv->applyEvents(binary_event);
 
     envire::Grid<uint8_t> const* grid =
         mEnv->getItem< envire::Grid<uint8_t> >(_map_id.get()).get();
