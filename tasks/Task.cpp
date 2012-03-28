@@ -13,7 +13,9 @@ Task::Task(std::string const& name)
 
 bool Task::configureHook()
 {
-    if (_map_path.get().empty())
+    TaskBase::configureHook();
+
+    if (!_map_path.get().empty())
         mEnv = envire::Environment::unserialize(_map_path.get());
     else
         mEnv = new envire::Environment;
@@ -23,14 +25,46 @@ bool Task::configureHook()
 
 bool Task::startHook()
 {
+    TaskBase::startHook();
+
     delete planner;
     planner  = new corridor_planner::CorridorPlanner();
+
+    planner->setMarginFactor(_margin.get());
+    return true;
+}
+
+void Task::errorHook()
+{
+    std::cout << "errorHook" << std::endl;
+    std::vector<envire::EnvireBinaryEvent> binary_event;
+    while (_map.read(binary_event, false) == RTT::NewData) 
+        mEnv->applyEvents(binary_event);
+
+    envire::Grid<uint8_t> const* traversability =
+        mEnv->getItem< envire::Grid<uint8_t> >(_map_id.get()).get();
+    if (!traversability)
+    {
+        std::cout << "no traversability map with ID " << _map_id.get() << std::endl;
+        return;
+    }
+
+    envire::Grid<double>::Ptr geometry;
+    if (_enable_strong_edge_filter.get())
+    {
+        StrongEdgeFilterConfig config = _strong_edge_filter;
+        geometry = mEnv->getItem< envire::Grid<double> >(config.map_id);
+        if (!geometry)
+            return;
+    }
+
+    planner->init(_terrain_classes.get(), *traversability,
+            _map_band.get(), _min_width.get(), _cost_cutoff.get());
 
     if (_enable_strong_edge_filter.get())
     {
         StrongEdgeFilterConfig config = _strong_edge_filter;
-        planner->enableStrongEdgeFilter(config.env_path,
-                config.map_id,
+        planner->enableStrongEdgeFilter(geometry,
                 config.band_name,
                 config.threshold);
     }
@@ -44,37 +78,21 @@ bool Task::startHook()
 
     Eigen::Vector3d p0 = _start_point.get();
     Eigen::Vector3d p1 = _target_point.get();
-    planner->setMarginFactor(_margin.get());
     planner->setWorldPositions(
             Eigen::Vector2d(p0.x(), p0.y()), 
             Eigen::Vector2d(p1.x(), p1.y()));
 
-    error(WAIT_FOR_MAP);
-    return true;
-}
-
-void Task::errorHook()
-{
-    std::vector<envire::EnvireBinaryEvent> binary_event;
-    while (_map.read(binary_event) == RTT::NewData) 
-        mEnv->applyEvents(binary_event);
-
-    envire::Grid<uint8_t> const* grid =
-        mEnv->getItem< envire::Grid<uint8_t> >(_map_id.get()).get();
-    if ( grid )
-    {
-        planner->init(_terrain_classes.get(), *grid,
-                _map_band.get(), _min_width.get(), _cost_cutoff.get());
-        recover();
-    }
+    std::cout << "starting" << std::endl;
+    state(DSTAR);
+    getActivity()->trigger();
 }
 
 void Task::updateHook()
 {
+    std::cout << "updateHook ! state=" << state() << std::endl;
     if (state() == RUNNING)
-        state(DSTAR);
-
-    if (state() == DSTAR)
+        error(WAIT_FOR_MAP);
+    else if (state() == DSTAR)
     {
         try {
             planner->computeDStar();

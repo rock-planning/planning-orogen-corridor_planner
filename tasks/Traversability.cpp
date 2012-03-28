@@ -132,6 +132,7 @@ void Traversability::updateHook()
     // on the port
     {
         envire::EnvironmentItem::Ptr map = mEnv->detachItem(traversability);
+        envire::EnvironmentItem::Ptr geometry = mEnv->detachItem(mls_geometry);
         envire::EnvironmentItem::Ptr node = mEnv->detachItem(frame_node);
         delete mEnv;
         mEnv = new envire::Environment;
@@ -139,6 +140,7 @@ void Traversability::updateHook()
         // These two have been kept alive by storing the return value of
         // detachItem
         mEnv->attachItem(traversability, frame_node);
+        mEnv->attachItem(mls_geometry, frame_node);
     }
 
     // Do the export
