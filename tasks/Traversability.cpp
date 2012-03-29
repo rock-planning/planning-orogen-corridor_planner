@@ -131,21 +131,28 @@ void Traversability::updateHook()
     // Detach the result, add it to a new environment and dump that environment
     // on the port
     {
+        envire::FrameNode::TransformType transform =
+            mEnv->relativeTransform(frame_node, mEnv->getRootNode());
+
         envire::EnvironmentItem::Ptr map = mEnv->detachItem(traversability);
         envire::EnvironmentItem::Ptr geometry = mEnv->detachItem(mls_geometry);
-        envire::EnvironmentItem::Ptr node = mEnv->detachItem(frame_node);
         delete mEnv;
         mEnv = new envire::Environment;
         mEnv->setEnvironmentPrefix(_env_name.get());
+        envire::FrameNode* frame_node = new envire::FrameNode(transform);
+        mEnv->getRootNode()->addChild(frame_node);
         // These two have been kept alive by storing the return value of
         // detachItem
         mEnv->attachItem(traversability, frame_node);
         mEnv->attachItem(mls_geometry, frame_node);
     }
 
-    // Do the export
-    envire::OrocosEmitter emitter(mEnv, _traversability_map);
-    emitter.flush();
+    // Do the export. Do it in a block so that the emitter gets deleted before
+    // the environment is.
+    {
+        envire::OrocosEmitter emitter(mEnv, _traversability_map);
+        emitter.flush();
+    }
 
     // Finally, reinitialise the environment for the next update
     delete mEnv;
