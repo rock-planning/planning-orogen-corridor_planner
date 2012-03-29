@@ -72,7 +72,7 @@ void Traversability::updateHook()
     // Create the slope and max step grids
     envire::Grid<double>* mls_geometry =
         new envire::Grid<double>(xSize, ySize, mls->getScaleX(), mls->getScaleY(),
-                0, 0, "mls_geometry");
+                mls->getOffsetX(), mls->getOffsetY(), "mls_geometry");
     mEnv->attachItem(mls_geometry, frame_node);
     envire::MLSSlope* op_mls_slope = new envire::MLSSlope;
     mEnv->attachItem(op_mls_slope);
@@ -82,7 +82,7 @@ void Traversability::updateHook()
     // And convert to traversability
     envire::Grid<uint8_t>* traversability =
         new envire::Grid<uint8_t>(xSize, ySize, mls->getScaleX(), mls->getScaleY(),
-                0, 0, "map");
+                mls->getOffsetX(), mls->getOffsetY(), "map");
     mEnv->attachItem(traversability, frame_node);
     envire::SimpleTraversability* op_trav = new envire::SimpleTraversability(_traversability_conf);
     mEnv->attachItem(op_trav);
