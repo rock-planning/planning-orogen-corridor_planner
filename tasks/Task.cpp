@@ -82,6 +82,7 @@ void Task::errorHook()
             Eigen::Vector2d(p0.x(), p0.y()), 
             Eigen::Vector2d(p1.x(), p1.y()));
 
+    recover();
     std::cout << "starting" << std::endl;
     state(DSTAR);
     getActivity()->trigger();
