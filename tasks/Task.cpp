@@ -36,7 +36,6 @@ bool Task::startHook()
 
 void Task::errorHook()
 {
-    std::cout << "errorHook" << std::endl;
     std::vector<envire::EnvireBinaryEvent> binary_event;
     while (_map.read(binary_event, false) == RTT::NewData) 
         mEnv->applyEvents(binary_event);
@@ -83,14 +82,12 @@ void Task::errorHook()
             Eigen::Vector2d(p1.x(), p1.y()));
 
     recover();
-    std::cout << "starting" << std::endl;
     state(DSTAR);
     getActivity()->trigger();
 }
 
 void Task::updateHook()
 {
-    std::cout << "updateHook ! state=" << state() << std::endl;
     if (state() == RUNNING)
         error(WAIT_FOR_MAP);
     else if (state() == DSTAR)
