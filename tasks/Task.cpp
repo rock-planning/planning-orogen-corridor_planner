@@ -99,8 +99,9 @@ void Task::updateHook()
             planner->computeDStar();
             state(SKELETON);
         }
-        catch(corridor_planner::CostCutoffReached)
+        catch(corridor_planner::CostCutoffReached const& e)
         {
+            std::cout << e.what() << std::endl;
             exception(NO_SOLUTION);
         }
     }
