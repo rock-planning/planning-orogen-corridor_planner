@@ -1,6 +1,8 @@
 #ifndef OROGEN_CORRIDOR_PLANNER_FILTER_CONFIG_TYPES_HPP
 #define OROGEN_CORRIDOR_PLANNER_FILTER_CONFIG_TYPES_HPP
 
+#include <boost/cstdint.hpp>
+
 namespace corridor_planner {
     struct StrongEdgeFilterConfig {
         std::string env_path;
@@ -12,6 +14,10 @@ namespace corridor_planner {
     struct NarrowWideFilterConfig {
         double narrow_threshold;
         double wide_threshold;
+    };
+
+    struct KnownUnknownFilterConfig {
+        boost::uint8_t unknown_class;
     };
 }
 

@@ -40,7 +40,7 @@ void Task::errorHook()
     while (_map.read(binary_event, false) == RTT::NewData) 
         mEnv->applyEvents(binary_event);
 
-    envire::Grid<uint8_t> const* traversability =
+    envire::Grid<uint8_t>* traversability =
         mEnv->getItem< envire::Grid<uint8_t> >(_map_id.get()).get();
     if (!traversability)
     {
@@ -73,6 +73,12 @@ void Task::errorHook()
         NarrowWideFilterConfig config = _narrow_wide_filter;
         planner->enableNarrowWideFilter(config.narrow_threshold,
                 config.wide_threshold);
+    }
+
+    if (_enable_known_unknown_filter.get())
+    {
+        KnownUnknownFilterConfig config = _known_unknown_filter;
+        planner->enableKnownUnknownFilter(traversability, _map_band.get(), config.unknown_class);
     }
 
     Eigen::Vector3d p0 = _start_point.get();

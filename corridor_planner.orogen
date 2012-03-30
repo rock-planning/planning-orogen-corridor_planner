@@ -36,11 +36,14 @@ task_context 'Task' do
     property('min_width', 'double', 0).
         doc "minimum width at which a corridor can be traversed, in meters"
 
-    property('enable_strong_edge_filter', 'bool')
+    property('enable_strong_edge_filter', 'bool', false)
     property('strong_edge_filter', 'corridor_planner/StrongEdgeFilterConfig')
 
-    property('enable_narrow_wide_filter', 'bool')
+    property('enable_narrow_wide_filter', 'bool', false)
     property('narrow_wide_filter', 'corridor_planner/NarrowWideFilterConfig')
+
+    property('enable_known_unknown_filter', 'bool', false)
+    property('known_unknown_filter', 'corridor_planner/KnownUnknownFilterConfig')
 
     input_port('map', 'std/vector</envire/EnvireBinaryEvent>').
 	doc("Current map")
