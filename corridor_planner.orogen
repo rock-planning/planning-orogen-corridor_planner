@@ -73,8 +73,14 @@ task_context 'Traversability' do
         doc "map size in the X direction in meters"
     property("y_size", "double").
         doc "map size in the Y direction in meters"
+    property("x_offset", "double").
+	doc "x zero offset of the output map in meters"
+    property("y_offset", "double").
+	doc "y zero offset of the output map in meters"
     property("cell_size", "double").
         doc "size of a cell in meters"
+    property("map_mode", "/corridor_planner/MapSizeMode", :INPUT).
+	doc "select where to get the size parameters from. :INPUT from input map, :PARAMS from parameters"
 
     property("env_save_path", "std/string").
         doc "if set to a non-empty string, save each generated environment under env_save_path/<seq number>/"

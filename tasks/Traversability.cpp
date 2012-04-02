@@ -67,12 +67,29 @@ void Traversability::updateHook()
 
     envire::FrameNode* frame_node = mls->getFrameNode();
 
+    // extract map resolution parameters
     size_t xSize = mls->getCellSizeX(), ySize = mls->getCellSizeY();
+    double xScale = mls->getScaleX(), yScale = mls->getScaleY();
+    double xOffset = mls->getOffsetX(), yOffset = mls->getOffsetY();
+
+    // override values with parameters if fixed mode is set
+    if( _map_mode.value() == PARAMS )
+    {
+	xOffset = _x_offset.value();
+	yOffset = _y_offset.value();
+	if( _cell_size.value() > 0 )
+	{
+	    xScale = _cell_size.value();
+	    yScale = _cell_size.value();
+	}
+	xSize = _x_size.value() / xScale;
+	ySize = _y_size.value() / yScale;
+    }
 
     // Create the slope and max step grids
     envire::Grid<double>* mls_geometry =
-        new envire::Grid<double>(xSize, ySize, mls->getScaleX(), mls->getScaleY(),
-                mls->getOffsetX(), mls->getOffsetY(), "mls_geometry");
+        new envire::Grid<double>(xSize, ySize, xScale, yScale,
+                xOffset, yOffset, "mls_geometry");
     mEnv->attachItem(mls_geometry, frame_node);
     envire::MLSSlope* op_mls_slope = new envire::MLSSlope;
     mEnv->attachItem(op_mls_slope);
@@ -81,8 +98,8 @@ void Traversability::updateHook()
 
     // And convert to traversability
     envire::Grid<uint8_t>* traversability =
-        new envire::Grid<uint8_t>(xSize, ySize, mls->getScaleX(), mls->getScaleY(),
-                mls->getOffsetX(), mls->getOffsetY(), "map");
+        new envire::Grid<uint8_t>(xSize, ySize, xScale, yScale,
+                xOffset, yOffset, "map");
     mEnv->attachItem(traversability, frame_node);
     envire::SimpleTraversability* op_trav = new envire::SimpleTraversability(_traversability_conf);
     mEnv->attachItem(op_trav);
@@ -97,7 +114,7 @@ void Traversability::updateHook()
         // // Generate the terrain type map
         // envire::Grid<uint16_t>* mls_terrains =
         //     new envire::Grid<uint16_t>(xSize, ySize,
-        //             mls->getScaleX(), mls->getScaleY(),
+        //             xScale, yScale,
         //             0, 0, "mls_terrains");
         // mEnv->attachItem(mls_terrains);
         // fillTerrainMap(*mls, *mls_terrains);
@@ -105,7 +122,7 @@ void Traversability::updateHook()
         // // Convert it to a max force map
         // envire::Grid<double>* max_force =
         //     new envire::Grid<double>(xSize, ySize,
-        //             mls->getScaleX(), mls->getScaleY(),
+        //             xScale, yScale,
         //             0, 0, "max_force");
         // mEnv->attachItem(max_force);
         // envire::ClassGridProjection<uint16_t, double>* op_max_force =
