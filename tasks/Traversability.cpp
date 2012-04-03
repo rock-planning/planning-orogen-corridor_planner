@@ -67,24 +67,19 @@ void Traversability::updateHook()
 
     envire::FrameNode* frame_node = mls->getFrameNode();
 
-    // extract map resolution parameters
-    size_t xSize = mls->getCellSizeX(), ySize = mls->getCellSizeY();
-    double xScale = mls->getScaleX(), yScale = mls->getScaleY();
-    double xOffset = mls->getOffsetX(), yOffset = mls->getOffsetY();
-
-    // override values with parameters if fixed mode is set
-    if( _map_mode.value() == PARAMS )
+    // get the extents from the map, and extend it with the extents provided by
+    // the parameters (if any)
+    Eigen::AlignedBox<double, 2> extents = mls->getExtents();
+    Eigen::Affine3d world2grid = mEnv->getRootNode()->relativeTransform( frame_node );
+    for( std::vector<base::Vector2d>::iterator it = _map_extents.value().begin(); it != _map_extents.value().end(); it++ )
     {
-	xOffset = _x_offset.value();
-	yOffset = _y_offset.value();
-	if( _cell_size.value() > 0 )
-	{
-	    xScale = _cell_size.value();
-	    yScale = _cell_size.value();
-	}
-	xSize = _x_size.value() / xScale;
-	ySize = _y_size.value() / yScale;
+	Eigen::Vector3d p;
+	p << *it, 0;
+    	extents.extend( (world2grid * p).head<2>() );
     }
+    double xScale = mls->getScaleX(), yScale = mls->getScaleY();
+    size_t xSize = extents.sizes().x() / xScale, ySize = extents.sizes().y() / yScale;
+    double xOffset = extents.min().x(), yOffset = extents.min().y();
 
     // Create the slope and max step grids
     envire::Grid<double>* mls_geometry =

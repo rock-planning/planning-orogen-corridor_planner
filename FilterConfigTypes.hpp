@@ -19,13 +19,6 @@ namespace corridor_planner {
     struct KnownUnknownFilterConfig {
         boost::uint8_t unknown_class;
     };
-
-    enum MapSizeMode {
-	/** use map size of input map */
-	INPUT = 0,
-	/** use map size parameters provided */
-	PARAMS = 1
-    };
 }
 
 #endif
