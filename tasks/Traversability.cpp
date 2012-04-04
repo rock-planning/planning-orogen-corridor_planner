@@ -5,6 +5,7 @@
 #include <envire/operators/SimpleTraversability.hpp>
 #include <envire/operators/MLSSlope.hpp>
 #include <envire/maps/MLSGrid.hpp>
+#include <envire/operators/MergeMLS.hpp>
 #include <envire/operators/ClassGridProjection.hpp>
 #include <envire/Orocos.hpp>
 
@@ -61,15 +62,15 @@ void Traversability::updateHook()
     while (_mls_map.read(binary_events) == RTT::NewData) 
         mEnv->applyEvents(binary_events);
 
-    envire::MLSGrid* mls = mEnv->getItem< envire::MLSGrid >(_mls_id.get()).get();
-    if (! mls)
+    envire::MLSGrid* mls_in = mEnv->getItem< envire::MLSGrid >(_mls_id.get()).get();
+    if (! mls_in)
         return;
 
-    envire::FrameNode* frame_node = mls->getFrameNode();
+    envire::FrameNode* frame_node = mls_in->getFrameNode();
 
     // get the extents from the map, and extend it with the extents provided by
     // the parameters (if any)
-    Eigen::AlignedBox<double, 2> extents = mls->getExtents();
+    Eigen::AlignedBox<double, 2> extents = mls_in->getExtents();
     Eigen::Affine3d world2grid = mEnv->getRootNode()->relativeTransform( frame_node );
     for( std::vector<base::Vector2d>::iterator it = _map_extents.value().begin(); it != _map_extents.value().end(); it++ )
     {
@@ -77,9 +78,23 @@ void Traversability::updateHook()
 	p << *it, 0;
     	extents.extend( (world2grid * p).head<2>() );
     }
-    double xScale = mls->getScaleX(), yScale = mls->getScaleY();
+    double xScale = mls_in->getScaleX(), yScale = mls_in->getScaleY();
     size_t xSize = extents.sizes().x() / xScale, ySize = extents.sizes().y() / yScale;
     double xOffset = extents.min().x(), yOffset = extents.min().y();
+
+    // see if we need to resize the input mls 
+    envire::MLSGrid* mls = mls_in;
+    if( xScale != mls_in->getCellSizeX() || yScale != mls_in->getCellSizeY() )
+    {
+	mls = new envire::MLSGrid(xSize, ySize, xScale, yScale,
+		xOffset, yOffset);
+	mEnv->setFrameNode( mls, mls_in->getFrameNode() );
+	envire::MergeMLS* op_mls_merge = new envire::MergeMLS;
+	mEnv->attachItem(op_mls_merge);
+	op_mls_merge->setInput( mls_in );
+	op_mls_merge->setOutput( mls );
+	op_mls_merge->updateAll();
+    }
 
     // Create the slope and max step grids
     envire::Grid<double>* mls_geometry =
