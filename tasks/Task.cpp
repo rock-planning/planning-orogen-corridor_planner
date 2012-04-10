@@ -20,6 +20,12 @@ bool Task::configureHook()
     else
         mEnv = new envire::Environment;
 
+    if(_terrain_classes.get().empty())
+    {
+	std::cout << "No terrain classes set" << std::endl;
+	return false;
+    }
+    
     return true;
 }
 
