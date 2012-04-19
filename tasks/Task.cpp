@@ -144,13 +144,15 @@ void Task::updateHook()
 // {
 // }
 
-// void Task::stopHook()
-// {
-//     delete map;
-//     map = 0;
-// }
+void Task::stopHook()
+{
+    delete planner;
+    planner = 0;
+}
 
 void Task::cleanupHook()
 {
     delete mEnv;
+    mEnv = 0;
 }
+
