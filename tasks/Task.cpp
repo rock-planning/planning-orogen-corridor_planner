@@ -1,5 +1,6 @@
 #include "Task.hpp"
 #include <corridor_planner/corridor_planner.hh>
+#include <envire/Orocos.hpp>
 
 #include <boost/lexical_cast.hpp>
 
@@ -42,9 +43,9 @@ bool Task::startHook()
 
 void Task::errorHook()
 {
-    std::vector<envire::EnvireBinaryEvent> binary_event;
+    envire::OrocosEmitter::Ptr binary_event;
     while (_map.read(binary_event, false) == RTT::NewData) 
-        mEnv->applyEvents(binary_event);
+        mEnv->applyEvents(*binary_event);
 
     envire::Grid<uint8_t>* traversability =
         mEnv->getItem< envire::Grid<uint8_t> >(_map_id.get()).get();

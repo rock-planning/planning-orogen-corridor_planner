@@ -58,9 +58,9 @@ void Traversability::updateHook()
     TraversabilityBase::updateHook();
 
     // Read map data. Don't do anything until we get a new map
-    std::vector<envire::EnvireBinaryEvent> binary_events;
-    while (_mls_map.read(binary_events) == RTT::NewData) 
-        mEnv->applyEvents(binary_events);
+    envire::OrocosEmitter::Ptr binary_events;
+    while (_mls_map.read(binary_events, false) == RTT::NewData) 
+        mEnv->applyEvents(*binary_events);
 
     envire::MLSGrid* mls_in = mEnv->getItem< envire::MLSGrid >(_mls_id.get()).get();
     if (! mls_in)

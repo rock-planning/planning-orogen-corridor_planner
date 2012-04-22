@@ -45,7 +45,7 @@ task_context 'Task' do
     property('enable_known_unknown_filter', 'bool', false)
     property('known_unknown_filter', 'corridor_planner/KnownUnknownFilterConfig')
 
-    input_port('map', 'std/vector</envire/EnvireBinaryEvent>').
+    input_port('map', ro_ptr('std/vector</envire/BinaryEvent>')).
 	doc("Current map")
 
     runtime_states :dstar, # the task is running the D* pass
@@ -83,11 +83,12 @@ task_context 'Traversability' do
     property("traversability_conf", "/envire/SimpleTraversabilityConfig").
         doc "configuration parameters for the traversability transformation"
 
-    input_port('mls_map', 'std/vector</envire/EnvireBinaryEvent>').
+    input_port('mls_map', ro_ptr('std/vector</envire/BinaryEvent>')).
 	doc("Current map")
 
-    output_port('traversability_map', 'std/vector</envire/EnvireBinaryEvent>').
-	doc('Traversability map')
+    output_port('traversability_map', ro_ptr('std/vector</envire/BinaryEvent>')).
+	doc('Traversability map').
+        keep_last_written_value(false)
 
     port_driven
 end
