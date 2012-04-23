@@ -55,13 +55,16 @@ void Task::errorHook()
         return;
     }
 
-    envire::Grid<double>::Ptr geometry;
+    envire::Grid<float>::Ptr geometry;
     if (_enable_strong_edge_filter.get())
     {
         StrongEdgeFilterConfig config = _strong_edge_filter;
-        geometry = mEnv->getItem< envire::Grid<double> >(config.map_id);
+        geometry = mEnv->getItem< envire::Grid<float> >(config.map_id);
         if (!geometry)
+        {
+            std::cout << "no geometry map with ID " << config.map_id << std::endl;
             return;
+        }
     }
 
     planner->init(_terrain_classes.get(), *traversability,

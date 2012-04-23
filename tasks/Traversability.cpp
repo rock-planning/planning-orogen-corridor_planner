@@ -97,8 +97,8 @@ void Traversability::updateHook()
     }
 
     // Create the slope and max step grids
-    envire::Grid<double>* mls_geometry =
-        new envire::Grid<double>(xSize, ySize, xScale, yScale,
+    envire::Grid<float>* mls_geometry =
+        new envire::Grid<float>(xSize, ySize, xScale, yScale,
                 xOffset, yOffset, "mls_geometry");
     mEnv->attachItem(mls_geometry, frame_node);
     envire::MLSSlope* op_mls_slope = new envire::MLSSlope;
@@ -130,8 +130,8 @@ void Traversability::updateHook()
         // fillTerrainMap(*mls, *mls_terrains);
 
         // // Convert it to a max force map
-        // envire::Grid<double>* max_force =
-        //     new envire::Grid<double>(xSize, ySize,
+        // envire::Grid<float>* max_force =
+        //     new envire::Grid<float>(xSize, ySize,
         //             xScale, yScale,
         //             0, 0, "max_force");
         // mEnv->attachItem(max_force);
