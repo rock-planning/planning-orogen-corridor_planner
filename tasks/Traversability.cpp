@@ -178,6 +178,7 @@ void Traversability::updateHook()
     // the environment is.
     {
         envire::OrocosEmitter emitter(mEnv, _traversability_map);
+	emitter.setTime((*binary_events)[0].time);
         emitter.flush();
     }
 
