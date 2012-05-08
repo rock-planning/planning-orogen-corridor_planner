@@ -37,6 +37,9 @@ bool Task::startHook()
     delete planner;
     planner  = new corridor_planner::CorridorPlanner();
 
+    if(!mEnv)
+        mEnv = new envire::Environment;	
+    
     planner->setMarginFactor(_margin.get());
     return true;
 }
@@ -152,11 +155,20 @@ void Task::stopHook()
 {
     delete planner;
     planner = 0;
+    
+    if (_map_path.get().empty())
+    {
+	delete mEnv;
+	mEnv = 0;
+    }
 }
 
 void Task::cleanupHook()
 {
-    delete mEnv;
-    mEnv = 0;
+    if(mEnv)
+    {
+	delete mEnv;
+	mEnv = 0;	
+    }
 }
 
