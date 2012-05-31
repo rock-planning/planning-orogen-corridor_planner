@@ -20,4 +20,6 @@
 
   <!-- Needed for test deployment -->
   <depend package="tools/logger"/>
+
+  <tags>needs_opt</tags>
 </package>
