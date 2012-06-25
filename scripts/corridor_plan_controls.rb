@@ -199,7 +199,7 @@ module CorridorPlanControls
     end
 
     def setupUI
-        @vizkit_corridors = view3d.createPlugin('corridor_planner')
+        @vizkit_corridors = view3d.createPlugin('corridor_planner', 'CorridorPlanVisualization')
         vizkit_corridors.setAlpha(0.5)
         vizkit_corridors.setZOffset(0.05)
 
