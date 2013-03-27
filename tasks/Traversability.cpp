@@ -5,6 +5,7 @@
 #include <envire/operators/SimpleTraversability.hpp>
 #include <envire/operators/MLSSlope.hpp>
 #include <envire/maps/MLSGrid.hpp>
+#include <envire/maps/Grids.hpp>
 #include <envire/operators/MergeMLS.hpp>
 #include <envire/operators/ClassGridProjection.hpp>
 #include <envire/Orocos.hpp>
@@ -107,15 +108,15 @@ void Traversability::updateHook()
     op_mls_slope->setOutput(mls_geometry);
 
     // And convert to traversability
-    envire::Grid<uint8_t>* traversability =
-        new envire::Grid<uint8_t>(xSize, ySize, xScale, yScale,
+    envire::TraversabilityGrid* traversability =
+        new envire::TraversabilityGrid(xSize, ySize, xScale, yScale,
                 xOffset, yOffset, "map");
     mEnv->attachItem(traversability, frame_node);
     envire::SimpleTraversability* op_trav = new envire::SimpleTraversability(_traversability_conf);
     mEnv->attachItem(op_trav);
     op_trav->setSlope(mls_geometry, "mean_slope");
     op_trav->setMaxStep(mls_geometry, "corrected_max_step");
-    op_trav->setOutput(traversability, "");
+    op_trav->setOutput(traversability, envire::TraversabilityGrid::TRAVERSABILITY);
 
     if (!_terrain_info.get().empty())
     {
@@ -158,7 +159,7 @@ void Traversability::updateHook()
     // Detach the result, add it to a new environment and dump that environment
     // on the port
     {
-        envire::FrameNode::TransformType transform =
+        envire::Transform transform =
             mEnv->relativeTransform(frame_node, mEnv->getRootNode());
 
         envire::EnvironmentItem::Ptr map = mEnv->detachItem(traversability);
