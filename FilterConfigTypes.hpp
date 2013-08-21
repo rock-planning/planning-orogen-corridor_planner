@@ -2,6 +2,7 @@
 #define OROGEN_CORRIDOR_PLANNER_FILTER_CONFIG_TYPES_HPP
 
 #include <boost/cstdint.hpp>
+#include <string>
 
 namespace corridor_planner {
     struct StrongEdgeFilterConfig {
