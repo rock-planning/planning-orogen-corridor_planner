@@ -60,12 +60,18 @@ void Traversability::updateHook()
 
     // Read map data. Don't do anything until we get a new map
     envire::OrocosEmitter::Ptr binary_events;
-    while (_mls_map.read(binary_events, false) == RTT::NewData) 
+    while (_mls_map.read(binary_events, false) == RTT::NewData) {
         mEnv->applyEvents(*binary_events);
+        RTT::log(RTT::Info) << "Received new binary event" << RTT::endlog();
+    }
 
     envire::MLSGrid* mls_in = mEnv->getItem< envire::MLSGrid >(_mls_id.get()).get();
-    if (! mls_in)
+    if (! mls_in) {
+        RTT::log(RTT::Warning) << "No mls found with id " <<  _mls_id.get() << RTT::endlog();
         return;
+    }
+    
+    RTT::log(RTT::Info) << "Got a new mls map with id " << mls_in->getUniqueId() << RTT::endlog();
 
     envire::FrameNode* frame_node = mls_in->getFrameNode();
 
@@ -152,7 +158,7 @@ void Traversability::updateHook()
     if (!_env_save_path.get().empty())
     {
         std::string path = _env_save_path.get();
-        path += "/" + boost::lexical_cast<std::string>(++seq_number);
+        path += "/complete";
         mEnv->serialize(path);
     }
 
@@ -173,13 +179,20 @@ void Traversability::updateHook()
         // detachItem
         mEnv->attachItem(traversability, frame_node);
         mEnv->attachItem(mls_geometry, frame_node);
+        
+        if (!_env_save_path.get().empty())
+        {
+            std::string path = _env_save_path.get();
+            path += "/reduced";
+            mEnv->serialize(path);
+        }
     }
 
     // Do the export. Do it in a block so that the emitter gets deleted before
     // the environment is.
     {
         envire::OrocosEmitter emitter(mEnv, _traversability_map);
-	emitter.setTime((*binary_events)[0].time);
+        emitter.setTime((*binary_events)[0].time);
         emitter.flush();
     }
 
