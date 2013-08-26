@@ -29,6 +29,8 @@ namespace corridor_planner {
         envire::Environment* mEnv;
         int seq_number;
 
+        size_t mMaxExtent;
+
     public:
         /** TaskContext constructor for Traversability
          * \param name Name of the task. This name needs to be unique to make it identifiable via nameservices.

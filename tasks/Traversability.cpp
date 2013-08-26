@@ -39,6 +39,7 @@ bool Traversability::configureHook()
     if (! TraversabilityBase::configureHook())
         return false;
 
+    mMaxExtent = _map_max_extent.get();
 
     return true;
 }
@@ -104,7 +105,10 @@ void Traversability::updateHook()
     	extents.extend( (world2grid * p).head<2>() );
     }
     double xScale = mls_in->getScaleX(), yScale = mls_in->getScaleY();
-    size_t xSize = extents.sizes().x() / xScale, ySize = extents.sizes().y() / yScale;
+    double xCellSize = mls_in->getCellSizeX(), yCellSize = mls_in->getCellSizeX();
+    // Bounding the size of the mls_in map on the number of patches in each dimension
+    size_t xSize = std::min(mMaxExtent, (size_t) (extents.sizes().x() / xScale));
+    size_t ySize = std::min(mMaxExtent, (size_t) (extents.sizes().y() / yScale));
     double xOffset = extents.min().x(), yOffset = extents.min().y();
 
     // see if we need to resize the input mls 

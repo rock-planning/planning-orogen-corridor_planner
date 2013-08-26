@@ -72,6 +72,9 @@ task_context 'Traversability' do
     property("map_extents", "/std/vector<base/Vector2d>").
 	doc "If necessary the size of the input map will be extended, such that the output always contains the provided points in world coordinates."
 
+    property("map_max_extent", "/int", 1000).
+        doc "Number of maximum patches per dimension x/y."
+
     property("env_save_path", "std/string").
         doc "if set to a non-empty string, save each generated environment under env_save_path/<seq number>/"
 
