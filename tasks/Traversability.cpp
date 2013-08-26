@@ -111,6 +111,10 @@ void Traversability::updateHook()
     size_t ySize = std::min(mMaxExtent, (size_t) (extents.sizes().y() / yScale));
     double xOffset = extents.min().x(), yOffset = extents.min().y();
 
+    RTT::log(RTT::Debug) << "Traversability: input MLS: xScale: '" << xScale << "' yScale: '" << yScale << "'" << RTT::endlog();
+    RTT::log(RTT::Debug) << "Traversability: input MLS: xSize (max_extent: '" << mMaxExtent << "'): '" << xSize << "' ySize: '" << ySize << "'" << RTT::endlog();
+    RTT::log(RTT::Debug) << "Traversability: input MLS: xCellSize: '" << xCellSize << "' yCellSize: '" << yCellSize << "'" << RTT::endlog();
+
     // see if we need to resize the input mls 
     envire::MLSGrid* mls = mls_in;
     if( xScale != mls_in->getCellSizeX() || yScale != mls_in->getCellSizeY() )
@@ -125,6 +129,8 @@ void Traversability::updateHook()
 	op_mls_merge->updateAll();
     }
 
+    RTT::log(RTT::Debug) << "Traversability: create the slope and max step grids" << RTT::endlog();
+
     // Create the slope and max step grids
     envire::Grid<float>* mls_geometry =
         new envire::Grid<float>(xSize, ySize, xScale, yScale,
@@ -135,6 +141,7 @@ void Traversability::updateHook()
     op_mls_slope->setInput(mls);
     op_mls_slope->setOutput(mls_geometry);
 
+    RTT::log(RTT::Debug) << "Traversability: convert map to traversability map" << RTT::endlog();
     // And convert to traversability
     envire::TraversabilityGrid* traversability =
         new envire::TraversabilityGrid(xSize, ySize, xScale, yScale,
@@ -146,6 +153,7 @@ void Traversability::updateHook()
     op_trav->setMaxStep(mls_geometry, "corrected_max_step");
     op_trav->setOutput(traversability, envire::TraversabilityGrid::TRAVERSABILITY);
 
+    RTT::log(RTT::Debug) << "Traversability: retrieve terrain info" << RTT::endlog();
     if (!_terrain_info.get().empty())
     {
         throw std::runtime_error("terrain type handling is not implemented yet");
@@ -177,6 +185,7 @@ void Traversability::updateHook()
 
     mEnv->updateOperators();
 
+    RTT::log(RTT::Debug) << "Traversability: use env save path for serialization" << RTT::endlog();
     if (!_env_save_path.get().empty())
     {
         std::string path = _env_save_path.get();
@@ -184,6 +193,7 @@ void Traversability::updateHook()
         mEnv->serialize(path);
     }
 
+    RTT::log(RTT::Debug) << "Traversability: detach result" << RTT::endlog();
     // Detach the result, add it to a new environment and dump that environment
     // on the port
     {
@@ -210,6 +220,7 @@ void Traversability::updateHook()
         }
     }
 
+    RTT::log(RTT::Debug) << "Traversability: export result" << RTT::endlog();
     // Do the export. Do it in a block so that the emitter gets deleted before
     // the environment is.
     {
@@ -218,6 +229,7 @@ void Traversability::updateHook()
         emitter.flush();
     }
 
+    RTT::log(RTT::Debug) << "Traversability: cleanup for next update" << RTT::endlog();
     // Finally, reinitialise the environment for the next update
     delete mEnv;
     mEnv = new envire::Environment;
