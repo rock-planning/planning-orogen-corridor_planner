@@ -2,6 +2,7 @@
 #define OROGEN_CORRIDOR_PLANNER_TERRAIN_INFO_HPP
 
 #include <vector>
+#include <string>
 
 namespace corridor_planner
 {
