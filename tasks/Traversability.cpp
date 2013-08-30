@@ -66,6 +66,9 @@ void Traversability::updateHook()
         RTT::log(RTT::Info) << "Received new binary event" << RTT::endlog();
     }
     
+    // Tries to extract the MLS with the specified ID. If that is not possible, the first
+    // MLS will be used (if it is the only contained MLS).
+    // Fails if no MLS is available or the ID does not match and there are more than one MLS.
     std::vector<envire::MLSGrid*> mls_maps = mEnv->getItems<envire::MLSGrid>();
     if(mls_maps.size()) {
         std::stringstream ss;
@@ -83,8 +86,20 @@ void Traversability::updateHook()
 
     envire::MLSGrid* mls_in = mEnv->getItem< envire::MLSGrid >(_mls_id.get()).get();
     if (! mls_in) {
-        RTT::log(RTT::Warning) << "No mls found with id " <<  _mls_id.get() << RTT::endlog();
-        return;
+        RTT::log(RTT::Info) << "No mls found with id " <<  _mls_id.get() << RTT::endlog();
+        if(mls_maps.size() > 1) {
+            RTT::log(RTT::Warning) << "The environment contains more than one MLS map, please specify the map ID" << RTT::endlog();
+            return;
+        } else {
+            RTT::log(RTT::Info) << "The first MLS map will be used" << RTT::endlog();
+            std::vector<envire::MLSGrid*>::iterator it = mls_maps.begin();
+            mls_in = mEnv->getItem< envire::MLSGrid >((*it)->getUniqueId()).get();
+            if (! mls_in) {
+                RTT::log(RTT::Warning) << "MLS with ID " << (*it)->getUniqueId() << 
+                        " could not be extracted" << RTT::endlog();
+                return; 
+            }
+        }
     }
     
     RTT::log(RTT::Info) << "Got a new mls map with id " << mls_in->getUniqueId() << RTT::endlog();
