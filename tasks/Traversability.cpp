@@ -66,21 +66,18 @@ void Traversability::updateHook()
         RTT::log(RTT::Info) << "Received new binary event" << RTT::endlog();
     }
     
-    std::vector<envire::MLSGrid*> maps = mEnv->getItems<envire::MLSGrid>();
-    // Lists all received MLS maps.
-    std::stringstream ss;
-    if(maps.size()) {
+    std::vector<envire::MLSGrid*> mls_maps = mEnv->getItems<envire::MLSGrid>();
+    if(mls_maps.size()) {
+        std::stringstream ss;
         ss << "Received MLS map(s): " << std::endl;
- 
-        std::string trav_map_id;
-        std::vector<envire::MLSGrid*>::iterator it = maps.begin();
-        for(int i=0; it != maps.end(); ++it, ++i)
+        std::vector<envire::MLSGrid*>::iterator it = mls_maps.begin();
+        for(int i=0; it != mls_maps.end(); ++it, ++i)
         {
-            ss << i << ": " << (*it)->getUniqueId() << std::endl;
+            ss << i << ": "<< (*it)->getUniqueId() << std::endl;
         }
-        RTT::log(RTT::Info) << ss.str() << RTT::endlog(); 
+        RTT::log(RTT::Info) << ss.str() << RTT::endlog();
     } else {
-        RTT::log(RTT::Info) << "Environment does not contain any MLS grids" << RTT::endlog();
+        RTT::log(RTT::Warning) << "Environment does not contain any MLS grids" << RTT::endlog();
         return;
     }
 
