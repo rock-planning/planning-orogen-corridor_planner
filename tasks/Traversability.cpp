@@ -39,6 +39,7 @@ bool Traversability::configureHook()
     if (! TraversabilityBase::configureHook())
         return false;
 
+    mMaxExtent = _map_max_extent.get();
 
     return true;
 }
@@ -60,12 +61,48 @@ void Traversability::updateHook()
 
     // Read map data. Don't do anything until we get a new map
     envire::OrocosEmitter::Ptr binary_events;
-    while (_mls_map.read(binary_events, false) == RTT::NewData) 
+    while (_mls_map.read(binary_events, false) == RTT::NewData) {
         mEnv->applyEvents(*binary_events);
+        RTT::log(RTT::Info) << "Received new binary event" << RTT::endlog();
+    }
+    
+    // Tries to extract the MLS with the specified ID. If that is not possible, the first
+    // MLS will be used (if it is the only contained MLS).
+    // Fails if no MLS is available or the ID does not match and there are more than one MLS.
+    std::vector<envire::MLSGrid*> mls_maps = mEnv->getItems<envire::MLSGrid>();
+    if(mls_maps.size()) {
+        std::stringstream ss;
+        ss << "Received MLS map(s): " << std::endl;
+        std::vector<envire::MLSGrid*>::iterator it = mls_maps.begin();
+        for(int i=0; it != mls_maps.end(); ++it, ++i)
+        {
+            ss << i << ": "<< (*it)->getUniqueId() << std::endl;
+        }
+        RTT::log(RTT::Info) << ss.str() << RTT::endlog();
+    } else {
+        RTT::log(RTT::Warning) << "Environment does not contain any MLS grids" << RTT::endlog();
+        return;
+    }
 
     envire::MLSGrid* mls_in = mEnv->getItem< envire::MLSGrid >(_mls_id.get()).get();
-    if (! mls_in)
-        return;
+    if (! mls_in) {
+        RTT::log(RTT::Info) << "No mls found with id " <<  _mls_id.get() << RTT::endlog();
+        if(mls_maps.size() > 1) {
+            RTT::log(RTT::Warning) << "The environment contains more than one MLS map, please specify the map ID" << RTT::endlog();
+            return;
+        } else {
+            RTT::log(RTT::Info) << "The first MLS map will be used" << RTT::endlog();
+            std::vector<envire::MLSGrid*>::iterator it = mls_maps.begin();
+            mls_in = mEnv->getItem< envire::MLSGrid >((*it)->getUniqueId()).get();
+            if (! mls_in) {
+                RTT::log(RTT::Warning) << "MLS with ID " << (*it)->getUniqueId() << 
+                        " could not be extracted" << RTT::endlog();
+                return; 
+            }
+        }
+    }
+    
+    RTT::log(RTT::Info) << "Got a new mls map with id " << mls_in->getUniqueId() << RTT::endlog();
 
     envire::FrameNode* frame_node = mls_in->getFrameNode();
 
@@ -80,8 +117,15 @@ void Traversability::updateHook()
     	extents.extend( (world2grid * p).head<2>() );
     }
     double xScale = mls_in->getScaleX(), yScale = mls_in->getScaleY();
-    size_t xSize = extents.sizes().x() / xScale, ySize = extents.sizes().y() / yScale;
+    double xCellSize = mls_in->getCellSizeX(), yCellSize = mls_in->getCellSizeX();
+    // Bounding the size of the mls_in map on the number of patches in each dimension
+    size_t xSize = std::min(mMaxExtent, (size_t) (extents.sizes().x() / xScale));
+    size_t ySize = std::min(mMaxExtent, (size_t) (extents.sizes().y() / yScale));
     double xOffset = extents.min().x(), yOffset = extents.min().y();
+
+    RTT::log(RTT::Debug) << "Traversability: input MLS: xScale: '" << xScale << "' yScale: '" << yScale << "'" << RTT::endlog();
+    RTT::log(RTT::Debug) << "Traversability: input MLS: xSize (max_extent: '" << mMaxExtent << "'): '" << xSize << "' ySize: '" << ySize << "'" << RTT::endlog();
+    RTT::log(RTT::Debug) << "Traversability: input MLS: xCellSize: '" << xCellSize << "' yCellSize: '" << yCellSize << "'" << RTT::endlog();
 
     // see if we need to resize the input mls 
     envire::MLSGrid* mls = mls_in;
@@ -97,6 +141,8 @@ void Traversability::updateHook()
 	op_mls_merge->updateAll();
     }
 
+    RTT::log(RTT::Debug) << "Traversability: create the slope and max step grids" << RTT::endlog();
+
     // Create the slope and max step grids
     envire::Grid<float>* mls_geometry =
         new envire::Grid<float>(xSize, ySize, xScale, yScale,
@@ -107,6 +153,7 @@ void Traversability::updateHook()
     op_mls_slope->setInput(mls);
     op_mls_slope->setOutput(mls_geometry);
 
+    RTT::log(RTT::Debug) << "Traversability: convert map to traversability map" << RTT::endlog();
     // And convert to traversability
     envire::TraversabilityGrid* traversability =
         new envire::TraversabilityGrid(xSize, ySize, xScale, yScale,
@@ -118,6 +165,7 @@ void Traversability::updateHook()
     op_trav->setMaxStep(mls_geometry, "corrected_max_step");
     op_trav->setOutput(traversability, envire::TraversabilityGrid::TRAVERSABILITY);
 
+    RTT::log(RTT::Debug) << "Traversability: retrieve terrain info" << RTT::endlog();
     if (!_terrain_info.get().empty())
     {
         throw std::runtime_error("terrain type handling is not implemented yet");
@@ -149,13 +197,15 @@ void Traversability::updateHook()
 
     mEnv->updateOperators();
 
+    RTT::log(RTT::Debug) << "Traversability: use env save path for serialization" << RTT::endlog();
     if (!_env_save_path.get().empty())
     {
         std::string path = _env_save_path.get();
-        path += "/" + boost::lexical_cast<std::string>(++seq_number);
+        path += "/complete";
         mEnv->serialize(path);
     }
 
+    RTT::log(RTT::Debug) << "Traversability: detach result" << RTT::endlog();
     // Detach the result, add it to a new environment and dump that environment
     // on the port
     {
@@ -173,16 +223,25 @@ void Traversability::updateHook()
         // detachItem
         mEnv->attachItem(traversability, frame_node);
         mEnv->attachItem(mls_geometry, frame_node);
+        
+        if (!_env_save_path.get().empty())
+        {
+            std::string path = _env_save_path.get();
+            path += "/reduced";
+            mEnv->serialize(path);
+        }
     }
 
+    RTT::log(RTT::Debug) << "Traversability: export result" << RTT::endlog();
     // Do the export. Do it in a block so that the emitter gets deleted before
     // the environment is.
     {
         envire::OrocosEmitter emitter(mEnv, _traversability_map);
-	emitter.setTime((*binary_events)[0].time);
+        emitter.setTime((*binary_events)[0].time);
         emitter.flush();
     }
 
+    RTT::log(RTT::Debug) << "Traversability: cleanup for next update" << RTT::endlog();
     // Finally, reinitialise the environment for the next update
     delete mEnv;
     mEnv = new envire::Environment;
