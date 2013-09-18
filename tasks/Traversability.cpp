@@ -121,7 +121,16 @@ void Traversability::updateHook()
     // Bounding the size of the mls_in map on the number of patches in each dimension
     size_t xSize = std::min(mMaxExtent, (size_t) (extents.sizes().x() / xScale));
     size_t ySize = std::min(mMaxExtent, (size_t) (extents.sizes().y() / yScale));
+    
+    // No rescaling if extents.sizes() is not set / if it is set to 0.
+    if(xSize <= 0) {
+      xSize = xCellSize;
+    }
+    if(ySize <= 0) {
+      ySize = yCellSize;
+    }
     double xOffset = extents.min().x(), yOffset = extents.min().y();
+
 
     RTT::log(RTT::Debug) << "Traversability: input MLS: xScale: '" << xScale << "' yScale: '" << yScale << "'" << RTT::endlog();
     RTT::log(RTT::Debug) << "Traversability: input MLS: xSize (max_extent: '" << mMaxExtent << "'): '" << xSize << "' ySize: '" << ySize << "'" << RTT::endlog();
@@ -129,7 +138,7 @@ void Traversability::updateHook()
 
     // see if we need to resize the input mls 
     envire::MLSGrid* mls = mls_in;
-    if( xScale != mls_in->getCellSizeX() || yScale != mls_in->getCellSizeY() )
+    if( xSize != mls_in->getCellSizeX() || ySize != mls_in->getCellSizeY() )
     {
 	mls = new envire::MLSGrid(xSize, ySize, xScale, yScale,
 		xOffset, yOffset);
