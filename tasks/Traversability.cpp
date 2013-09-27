@@ -61,9 +61,12 @@ void Traversability::updateHook()
 
     // Read map data. Don't do anything until we get a new map
     envire::OrocosEmitter::Ptr binary_events;
-    while (_mls_map.read(binary_events, false) == RTT::NewData) {
+    if (_mls_map.read(binary_events) == RTT::NewData) {
         mEnv->applyEvents(*binary_events);
         RTT::log(RTT::Info) << "Received new binary event" << RTT::endlog();
+    } else {
+        RTT::log(RTT::Warning) << "Update hook is triggered but now new data available" << RTT::endlog();
+        return;  
     }
     
     // Tries to extract the MLS with the specified ID. If that is not possible, the first
@@ -101,6 +104,7 @@ void Traversability::updateHook()
             }
         }
     }
+    
     
     RTT::log(RTT::Info) << "Got a new mls map with id " << mls_in->getUniqueId() << RTT::endlog();
 
@@ -246,8 +250,10 @@ void Traversability::updateHook()
     // the environment is.
     {
         envire::OrocosEmitter emitter(mEnv, _traversability_map);
+        assert(!binary_events->empty());
         emitter.setTime((*binary_events)[0].time);
         emitter.flush();
+            
     }
 
     RTT::log(RTT::Debug) << "Traversability: cleanup for next update" << RTT::endlog();
