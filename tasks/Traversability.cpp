@@ -235,7 +235,6 @@ void Traversability::updateHook()
         // These two have been kept alive by storing the return value of
         // detachItem
         mEnv->attachItem(traversability, frame_node);
-        mEnv->attachItem(mls_geometry, frame_node);
         
         if (!_env_save_path.get().empty())
         {
