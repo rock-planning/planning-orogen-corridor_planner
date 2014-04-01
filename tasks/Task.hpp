@@ -2,6 +2,7 @@
 #define NAV_CORRIDORPLANNER_TASK_HPP
 
 #include "corridor_planner/TaskBase.hpp"
+#include <envire/Core.hpp>
 
 namespace corridor_planner {
     class CorridorPlanner;

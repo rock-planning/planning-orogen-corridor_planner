@@ -7,7 +7,6 @@ using_library 'corridor_planner'
 import_types_from "corridor_planner/corridors.hh"
 import_types_from "FilterConfigTypes.hpp"
 import_types_from "TerrainInfo.hpp"
-import_types_from "envire/operators/SimpleTraversability.hpp"
 import_types_from "envire"
 using_library "envire"
 
@@ -59,39 +58,6 @@ task_context 'Task' do
     exception_states :no_solution
 
     output_port 'plan', 'corridors/Plan'
-
-    port_driven
-end
-
-task_context 'Traversability' do
-    needs_configuration
-
-    property("env_name", "std/string", "/traversability/").
-        doc "the envire prefix that should be used to create new maps"
-
-    property("map_extents", "/std/vector<base/Vector2d>").
-	doc "If necessary the size of the input map will be extended, such that the output always contains the provided points in world coordinates."
-
-    property("map_max_extent", "/int", 1000).
-        doc "Number of maximum patches per dimension x/y."
-
-    property("env_save_path", "std/string").
-        doc "if set to a non-empty string, save each generated environment under env_save_path/<seq number>/"
-
-    property("mls_id", "std/string", "/slam/mls").
-        doc "the map ID of the input MLS map. The terrain type information is expected to be encoded as RGB value on the MLS"
-    property("terrain_info", "/corridor_planner/TerrainInfo").
-        doc "structure describing the known terrain types"
-
-    property("traversability_conf", "/envire/SimpleTraversabilityConfig").
-        doc "configuration parameters for the traversability transformation"
-
-    input_port('mls_map', ro_ptr('std/vector</envire/BinaryEvent>')).
-	doc("Current map")
-
-    output_port('traversability_map', ro_ptr('std/vector</envire/BinaryEvent>')).
-	doc('Traversability map').
-        keep_last_written_value(false)
 
     port_driven
 end
